@@ -28,11 +28,13 @@ object Dependencies {
   private val googleApiClientV = "1.28.0"
   private val googleCloudCoreV = "1.61.0"
   private val googleCloudKmsV = "v1-rev63-1.25.0"
+  private val googleCloudMonitoringV = "1.70.0"
   private val googleCloudNioV = "0.61.0-alpha"
   private val googleGenomicsServicesV1ApiV = "v1alpha2-rev495-1.23.0"
   private val googleGenomicsServicesV2ApiV = "v2alpha1-rev31-1.25.0"
   private val googleOauth2V = "0.13.0"
   private val grpcV = "1.18.0"
+  private val grpcNewV = "1.20.0"
   private val guavaV = "27.0.1-jre"
   private val heterodonV = "1.0.0-beta3"
   private val hsqldbV = "2.4.1"
@@ -339,6 +341,10 @@ object Dependencies {
     "com.readytalk" % "metrics3-statsd" % metrics3StatsdV
   )
 
+  val stackdriverDependencies = List(
+    "com.google.cloud" % "google-cloud-monitoring" % googleCloudMonitoringV
+  )
+
   val gcsFileSystemDependencies = akkaHttpDependencies
 
   val httpFileSystemDependencies = akkaHttpDependencies
@@ -424,11 +430,11 @@ object Dependencies {
     "com.google.auth" % "google-auth-library-oauth2-http" % googleOauth2V,
     "com.chuusai" %% "shapeless" % shapelessV,
     "com.github.scopt" %% "scopt" % scoptV,
-    "org.scalamock" %% "scalamock" % scalamockV % Test,
+    "org.scalamock" %% "scalamock" % scalamockV % Test
   ) ++ akkaStreamDependencies ++ configDependencies ++ catsDependencies ++ circeDependencies ++
     googleApiClientDependencies ++ statsDDependencies ++ betterFilesDependencies ++
     // TODO: We're not using the "F" in slf4j. Core only supports logback, specifically the WorkflowLogger.
-    slf4jBindingDependencies
+    slf4jBindingDependencies ++ stackdriverDependencies
 
   val databaseMigrationDependencies = liquibaseDependencies ++ dbmsDependencies
 
@@ -437,7 +443,7 @@ object Dependencies {
   val cromwellApiClientDependencies = List(
     "org.scalaz" %% "scalaz-core" % scalazV,
     "org.typelevel" %% "cats-effect" % catsEffectV,
-    "co.fs2" %% "fs2-io" % fs2V % Test,
+    "co.fs2" %% "fs2-io" % fs2V % Test
   ) ++ akkaHttpDependencies ++ betterFilesDependencies ++ catsDependencies
 
   val centaurDependencies = List(
@@ -581,6 +587,10 @@ object Dependencies {
     "util",
   ).map(m => "org.eclipse.rdf4j" % s"rdf4j-$m" % rdf4jV)
 
+  val grpcDependencyOverrides = List(
+    "io.grpc" % "grpc-core" % grpcNewV
+  )
+
   /*
   If we use a version in one of our projects, that's the one we want all the libraries to use
   ...plus other groups of transitive dependencies shared across multiple projects
@@ -588,5 +598,6 @@ object Dependencies {
   val cromwellDependencyOverrides =
     allProjectDependencies ++
       nettyDependencyOverrides ++
-      rdf4jDependencyOverrides
+      rdf4jDependencyOverrides ++
+      grpcDependencyOverrides
 }
