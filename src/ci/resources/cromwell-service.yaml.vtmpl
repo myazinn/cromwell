@@ -59,4 +59,4 @@ spec:
   volumes:
     - name: conf
       secret:
-        secretName: mlc-k8s-experiments
+        secretName: KUBE_SECRET_NAME

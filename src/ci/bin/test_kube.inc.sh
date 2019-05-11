@@ -81,6 +81,10 @@ cromwell::kube::connection_name_for_cloud_sql_instance() {
     "gcloud --project $GOOGLE_PROJECT sql instances describe $instanceName --format='value(connectionName)'" | tr -d '\n')
 }
 
+cromwell::kube::generate_gke_secret_name() {
+  echo -n $(cromwell::kube::centaur_gke_name "secret")
+}
+
 cromwell::kube::generate_gke_cluster_name() {
   echo -n $(cromwell::kube::centaur_gke_name "cluster")
 }
@@ -125,4 +129,27 @@ cromwell::kube::delete_from_gcr() {
   local tag="$1"
   cromwell::kube::gcloud_run_as_service_account \
     "gcloud --project $GOOGLE_PROJECT --quiet container images delete $tag"
+}
+
+# Takes an arbitrary number of environment variable names (*not* values). For all *.vtmpl files in the resources directory,
+# replace text matching the name of each environment variable by the value of that environment variable.
+# Redirect output to a file named the same as the input file minus the .vtmpl extension.
+cromwell::kube::render_vtmpl_resources() {
+  local seds=$(cromwell::private::build_render_vtmpl_commands $*)
+  for file in $(find ${CROMWELL_BUILD_RESOURCES_SOURCES} -name '*.vtmpl')
+  do
+    local outfile="$(dirname $file)/$(basename $file .vtmpl)"
+    local command="cat ${file} | ${seds} > ${outfile}"
+    eval "$command"
+  done
+}
+
+cromwell::private::build_render_vtmpl_commands() {
+  local arr=()
+  for var in $*
+  do
+    arr+=(" sed 's/${var}/${!var}/g' ")
+  done
+  local IFS="|"
+  echo -n "${arr[*]}"
 }
