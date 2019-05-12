@@ -46,9 +46,11 @@ cp \
 #KUBE_CLOUDSQL_CONNECTION_NAME="$(cromwell::kube::connection_name_for_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME})"
 #echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
 #
+export KUBE_CLUSTER_NAME="mlc-gke-k8s-experiments"
 export KUBE_SECRET_NAME=$(cromwell::kube::generate_gke_secret_name)
 export KUBE_CLOUDSQL_CONNECTION_NAME="broad-dsde-cromwell-dev:us-central1:mlc-cloudsql-k8s-experiments"
 cromwell::kube::render_vtmpl_resources KUBE_CLOUDSQL_CONNECTION_NAME KUBE_SECRET_NAME
+cromwell::kube::configure_kubectl_for_gke ${KUBE_CLUSTER_NAME}
 cromwell::kube::create_secrets ${KUBE_SECRET_NAME}
 
 ## TODO Move this to the "cleanup" section of the script once there is also a "do real work" section.

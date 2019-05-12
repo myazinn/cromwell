@@ -89,10 +89,16 @@ cromwell::kube::generate_gke_cluster_name() {
   echo -n $(cromwell::kube::centaur_gke_name "cluster")
 }
 
+# Configure kubectl for gke
+cromwell::kube::configure_kubectl_for_gke() {
+  local gkeClusterName="$1"
+  cromwell::kube::gcloud_run_as_service_account \
+    "gcloud --project $GOOGLE_PROJECT container clusters get-credentials $gkeClusterName"
+}
+
 # Create a GKE cluster with the specified name.
 cromwell::kube::create_gke_cluster() {
   local gkeClusterName="$1"
-
   cromwell::kube::gcloud_run_as_service_account \
     "gcloud --project $GOOGLE_PROJECT container clusters create --zone $GOOGLE_ZONE $gkeClusterName --num-nodes=3"
 
