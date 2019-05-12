@@ -143,7 +143,10 @@ cromwell::kube::create_secrets() {
   local secret_name="$2"
 
   local from_files=""
-  for file in $(cromwell::kube::find_rendered_vtmpl_resources) "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/kube_cromwell.conf"; do
+  for file in \
+    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/kube_cromwell.conf" \
+    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/cromwell-centaur-service-account.json"
+  do
     from_files+=" --from-file=${DOCKER_ETC_PATH}/$(basename ${file}) "
   done
 
@@ -171,17 +174,6 @@ cromwell::kube::render_vtmpl_resources() {
     eval "${command}"
     echo "Rendering ${file} -> ${outfile}"
   done
-}
-
-cromwell::kube::find_rendered_vtmpl_resources() {
-  local err=""
-  for file in $(find ${CROMWELL_BUILD_RESOURCES_SOURCES} -name '*.vtmpl')
-  do
-    local outfile=$(cromwell::private::kube::rendered_file_for_vtmpl ${file})
-    if [[ ! -e ${outfile} ]]; then err+="Missing rendered resource '${outfile}' for vtmpl '${file}'\n"; fi
-    echo ${outfile}
-  done
-  if [[ ! -z ${err} ]]; then echo ${err}; exit 1; fi
 }
 
 cromwell::private::build_render_vtmpl_command() {
