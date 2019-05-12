@@ -143,7 +143,7 @@ cromwell::kube::create_secrets() {
   local secret_name="$2"
 
   local from_files=""
-  for file in $(cromwell::kube::find_rendered_vtmpl_resources); do
+  for file in $(cromwell::kube::find_rendered_vtmpl_resources) "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/kube_cromwell.conf"; do
     from_files+=" --from-file=${DOCKER_ETC_PATH}/$(basename ${file}) "
   done
 
