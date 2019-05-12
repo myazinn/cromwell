@@ -8,6 +8,7 @@ source "${BASH_SOURCE%/*}/test.inc.sh" || source test.inc.sh
 
 GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON="cromwell-centaur-service-account.json"
 GOOGLE_ZONE=us-central1-c
+DOCKER_ETC_PATH=/usr/share/etc
 
 cromwell::build::setup_common_environment
 
@@ -38,9 +39,16 @@ cromwell::kube::centaur_gke_name() {
 # Usage: cromwell::kube::gcloud_run_as_service_account command
 cromwell::kube::gcloud_run_as_service_account() {
   local command="$1"
-  local DOCKER_ETC_PATH=/usr/share/etc
   docker run -v "$CROMWELL_BUILD_RESOURCES_DIRECTORY:$DOCKER_ETC_PATH" -e DOCKER_ETC_PATH --rm google/cloud-sdk:latest /bin/bash -c "\
     gcloud auth activate-service-account --key-file $DOCKER_ETC_PATH/${GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON} && $command "
+}
+
+# Configure kubectl for gke then run the specified command
+cromwell::kube::gcloud_run_kubectl_command_as_service_account() {
+  local gkeClusterName="$1"
+  local command="$2"
+  cromwell::kube::gcloud_run_as_service_account \
+    "gcloud --project $GOOGLE_PROJECT container clusters get-credentials --zone $GOOGLE_ZONE $gkeClusterName && $command"
 }
 
 cromwell::kube::generate_cloud_sql_instance_name() {
@@ -89,13 +97,6 @@ cromwell::kube::generate_gke_cluster_name() {
   echo -n $(cromwell::kube::centaur_gke_name "cluster")
 }
 
-# Configure kubectl for gke
-cromwell::kube::configure_kubectl_for_gke() {
-  local gkeClusterName="$1"
-  cromwell::kube::gcloud_run_as_service_account \
-    "gcloud --project $GOOGLE_PROJECT container clusters get-credentials --zone $GOOGLE_ZONE $gkeClusterName"
-}
-
 # Create a GKE cluster with the specified name.
 cromwell::kube::create_gke_cluster() {
   local gkeClusterName="$1"
@@ -138,14 +139,19 @@ cromwell::kube::delete_from_gcr() {
 }
 
 cromwell::kube::create_secrets() {
-  local secret_name="$1"
+  local cluster_name="$1"
+  local secret_name="$2"
+
   local from_files=""
   for file in $(cromwell::kube::find_rendered_vtmpl_resources); do
-    from_files+=" --from-file=$file "
+    from_files+=" --from-file=${DOCKER_ETC_PATH}/$(basename ${file}) "
   done
 
-  cromwell::kube::gcloud_run_as_service_account \
-    "kubectl create secret generic ${secret_name} ${from_files}"
+  local command="kubectl create secret generic ${secret_name} ${from_files}"
+  echo "Creating secrets with command: $command"
+
+  cromwell::kube::gcloud_run_kubectl_command_as_service_account \
+    ${cluster_name} ${command}
 }
 
 # Takes an arbitrary number of environment variable names (*not* values). For all *.vtmpl files in the resources directory,
