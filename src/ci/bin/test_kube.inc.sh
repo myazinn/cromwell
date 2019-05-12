@@ -131,25 +131,48 @@ cromwell::kube::delete_from_gcr() {
     "gcloud --project $GOOGLE_PROJECT --quiet container images delete $tag"
 }
 
+cromwell::kube::create_secrets() {
+  local secret_name="$1"
+  local from_files=""
+  for file in $(cromwell::private::find_rendered_vtmpl_resources); do
+    from_files+=" --from-file=$file "
+  done
+
+  cromwell::kube::gcloud_run_as_service_account \
+    "kubectl create secret generic ${secret_name} ${from_files}"
+}
+
 # Takes an arbitrary number of environment variable names (*not* values). For all *.vtmpl files in the resources directory,
 # replace text matching the name of each environment variable by the value of that environment variable.
 # Redirect output to a file named the same as the input file minus the .vtmpl extension.
 cromwell::kube::render_vtmpl_resources() {
-  local seds=$(cromwell::private::build_render_vtmpl_commands $*)
+  local seds=$(cromwell::private::build_render_vtmpl_command $*)
   for file in $(find ${CROMWELL_BUILD_RESOURCES_SOURCES} -name '*.vtmpl')
   do
-    local outfile="$(dirname $file)/$(basename $file .vtmpl)"
+    local outfile=${file%.vtmpl}
     local command="cat ${file} | ${seds} > ${outfile}"
-    eval "$command"
+    eval "${command}"
+    echo ${outfile}
   done
 }
 
-cromwell::private::build_render_vtmpl_commands() {
-  local arr=()
+cromwell::kube::find_rendered_vtmpl_resources() {
+  local err=""
+  for file in $(find ${CROMWELL_BUILD_RESOURCES_SOURCES} -name '*.vtmpl')
+  do
+    local outfile=${file%.vtmpl}
+    if [[ ! -e ${outfile} ]]; then err+="Missing rendered resource '${outfile}' for vtmpl '${file}'\n"; fi
+    echo ${outfile}
+  done
+  if [[ ! -z ${err} ]]; then echo ${err}; exit 1; fi
+}
+
+cromwell::private::build_render_vtmpl_command() {
+  local seds=()
   for var in $*
   do
-    arr+=(" sed 's/${var}/${!var}/g' ")
+    seds+=(" sed 's/${var}/${!var}/g' ")
   done
   local IFS="|"
-  echo -n "${arr[*]}"
+  echo -n "${seds[*]}"
 }
