@@ -93,7 +93,7 @@ cromwell::kube::generate_gke_cluster_name() {
 cromwell::kube::configure_kubectl_for_gke() {
   local gkeClusterName="$1"
   cromwell::kube::gcloud_run_as_service_account \
-    "gcloud --project $GOOGLE_PROJECT container clusters get-credentials $gkeClusterName"
+    "gcloud --project $GOOGLE_PROJECT container clusters get-credentials --zone $GOOGLE_ZONE $gkeClusterName"
 }
 
 # Create a GKE cluster with the specified name.
