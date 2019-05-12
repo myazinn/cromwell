@@ -47,8 +47,9 @@ cromwell::kube::gcloud_run_as_service_account() {
 cromwell::kube::gcloud_run_kubectl_command_as_service_account() {
   local gkeClusterName="$1"
   local command="$2"
-  cromwell::kube::gcloud_run_as_service_account \
-    "gcloud --project $GOOGLE_PROJECT container clusters get-credentials --zone $GOOGLE_ZONE $gkeClusterName && $command"
+  local wholeCommand="gcloud --project $GOOGLE_PROJECT container clusters get-credentials --zone $GOOGLE_ZONE $gkeClusterName && $command"
+  echo "whole command is ${wholeCommand}"
+  cromwell::kube::gcloud_run_as_service_account ${wholeCommand}
 }
 
 cromwell::kube::generate_cloud_sql_instance_name() {
