@@ -154,6 +154,11 @@ cromwell::kube::create_secrets() {
     "${cluster_name}" "${command}"
 }
 
+cromwell::private::kube::rendered_file_for_vtmpl() {
+  local file="$1"
+  echo -n "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/$(basename ${file%.vtmpl})"
+}
+
 # Takes an arbitrary number of environment variable names (*not* values). For all *.vtmpl files in the resources directory,
 # replace text matching the name of each environment variable by the value of that environment variable.
 # Redirect output to a file named the same as the input file minus the .vtmpl extension.
@@ -161,7 +166,7 @@ cromwell::kube::render_vtmpl_resources() {
   local seds=$(cromwell::private::build_render_vtmpl_command $*)
   for file in $(find ${CROMWELL_BUILD_RESOURCES_SOURCES} -name '*.vtmpl')
   do
-    local outfile=${file%.vtmpl}
+    local outfile=$(cromwell::private::kube::rendered_file_for_vtmpl ${file})
     local command="cat ${file} | ${seds} > ${outfile}"
     eval "${command}"
     echo "Rendering ${file} -> ${outfile}"
@@ -172,7 +177,7 @@ cromwell::kube::find_rendered_vtmpl_resources() {
   local err=""
   for file in $(find ${CROMWELL_BUILD_RESOURCES_SOURCES} -name '*.vtmpl')
   do
-    local outfile=${file%.vtmpl}
+    local outfile=$(cromwell::private::kube::rendered_file_for_vtmpl ${file})
     if [[ ! -e ${outfile} ]]; then err+="Missing rendered resource '${outfile}' for vtmpl '${file}'\n"; fi
     echo ${outfile}
   done
