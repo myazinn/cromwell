@@ -39,7 +39,7 @@ cromwell::kube::centaur_gke_name() {
 cromwell::kube::gcloud_run_as_service_account() {
   local command="$1"
   local DOCKER_ETC_PATH=/usr/share/etc
-  docker run -v "$CROMWELL_BUILD_RESOURCES_DIRECTORY:$DOCKER_ETC_PATH" -e DOCKER_ETC_PATH --rm google/cloud-sdk:slim /bin/bash -c "\
+  docker run -v "$CROMWELL_BUILD_RESOURCES_DIRECTORY:$DOCKER_ETC_PATH" -e DOCKER_ETC_PATH --rm google/cloud-sdk:latest /bin/bash -c "\
     gcloud auth activate-service-account --key-file $DOCKER_ETC_PATH/${GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON} && $command "
 }
 
@@ -140,7 +140,7 @@ cromwell::kube::delete_from_gcr() {
 cromwell::kube::create_secrets() {
   local secret_name="$1"
   local from_files=""
-  for file in $(cromwell::private::find_rendered_vtmpl_resources); do
+  for file in $(cromwell::kube::find_rendered_vtmpl_resources); do
     from_files+=" --from-file=$file "
   done
 
@@ -158,7 +158,7 @@ cromwell::kube::render_vtmpl_resources() {
     local outfile=${file%.vtmpl}
     local command="cat ${file} | ${seds} > ${outfile}"
     eval "${command}"
-    echo ${outfile}
+    echo "Rendering ${file} -> ${outfile}"
   done
 }
 
