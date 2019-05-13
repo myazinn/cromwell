@@ -64,4 +64,4 @@ spec:
   volumes:
     - name: conf
       secret:
-        secretName: KUBE_SECRET_NAME
+        secretName: cromwell-secrets
