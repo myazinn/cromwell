@@ -143,11 +143,10 @@ cromwell::kube::create_secrets() {
   local secret_name="$2"
 
   local from_files=""
-  for file in \
-    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/kube_cromwell.conf" \
-    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/cromwell-centaur-service-account.json"
+  for file in ${CROMWELL_BUILD_RESOURCES_DIRECTORY}/*.conf ${CROMWELL_BUILD_RESOURCES_DIRECTORY}/*.json
   do
-    from_files+=" --from-file=${DOCKER_ETC_PATH}/$(basename ${file}) "
+    # This is going to run inside the gcloud Docker container which mounts the resources directory at $DOCKER_ETC_PATH
+    from_files+="--from-file=${DOCKER_ETC_PATH}/$(basename ${file}) "
   done
 
   local command="kubectl create secret generic ${secret_name} ${from_files}"

@@ -3,18 +3,12 @@
 # When this grows up there will be different confs for each of the roles (summarizer, frontend, backend) but for
 # now it's just the one conf.
 
-include required(classpath("application.conf"))
+include "papi_v2_application.conf"
 
-# call-caching.enabled=true
+database.db.user = "cromwell"
+database.db.password = "{{$cromwellCentaurGKE.Data.db_pass}}"
 
-database {
-  profile = "slick.jdbc.MySQLProfile$"
-  db {
-    driver = com.mysql.cj.jdbc.Driver
-    url = "jdbc:mysql://localhost:3306/cromwell_test?rewriteBatchedStatements=true&useSSL=false"
-    user = "cromwell"
-    password = "{{$cromwellCentaurGKE.Data.db_pass}}"
-    connectionTimeout = 5000
-  }
-}
+# Obvs can't have this for when this build gets Centaured but useful for now
+call-caching.enabled=false
+
 {{end}}
