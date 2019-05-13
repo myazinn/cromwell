@@ -46,12 +46,15 @@ cp \
 #KUBE_CLOUDSQL_CONNECTION_NAME="$(cromwell::kube::connection_name_for_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME})"
 #echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
 #
-export KUBE_CLUSTER_NAME="mlc-gke-k8s"
-export KUBE_SECRET_NAME=$(cromwell::kube::generate_gke_secret_name)
-export KUBE_CLOUDSQL_CONNECTION_NAME="broad-dsde-cromwell-dev:us-central1:mlc-cloudsql-k8s-experiments"
-cromwell::kube::render_vtmpl_resources KUBE_CLOUDSQL_CONNECTION_NAME KUBE_SECRET_NAME
-cromwell::kube::create_secrets ${KUBE_CLUSTER_NAME} ${KUBE_SECRET_NAME}
-cromwell::kube::start_cromwell ${KUBE_CLUSTER_NAME}
+KUBE_CLUSTER_NAME="mlc-gke-k8s"
+KUBE_CLOUDSQL_CONNECTION_NAME="broad-dsde-cromwell-dev:us-central1:mlc-cloudsql-k8s-experiments"
+
+# All environment variables named like KUBE_FOO_NAME
+KUBE_VARIABLES=$(compgen -v | grep '^KUBE.*NAME$')
+cromwell::kube::render_vtmpl_resources ${KUBE_VARIABLES}
+
+cromwell::kube::create_secrets
+cromwell::kube::start_cromwell
 
 ## TODO Move this to the "cleanup" section of the script once there is also a "do real work" section.
 #cromwell::kube::destroy_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME}

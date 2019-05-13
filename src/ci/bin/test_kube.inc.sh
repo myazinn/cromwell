@@ -89,10 +89,6 @@ cromwell::kube::connection_name_for_cloud_sql_instance() {
     "gcloud --project $GOOGLE_PROJECT sql instances describe $instanceName --format='value(connectionName)'" | tr -d '\n')
 }
 
-cromwell::kube::generate_gke_secret_name() {
-  echo -n $(cromwell::kube::centaur_gke_name "secret")
-}
-
 cromwell::kube::generate_gke_cluster_name() {
   echo -n $(cromwell::kube::centaur_gke_name "cluster")
 }
@@ -139,9 +135,6 @@ cromwell::kube::delete_from_gcr() {
 }
 
 cromwell::kube::create_secrets() {
-  local cluster_name="$1"
-  local secret_name="$2"
-
   local from_files=""
   for file in ${CROMWELL_BUILD_RESOURCES_DIRECTORY}/*.conf ${CROMWELL_BUILD_RESOURCES_DIRECTORY}/*.json
   do
@@ -149,11 +142,12 @@ cromwell::kube::create_secrets() {
     from_files+="--from-file=${DOCKER_ETC_PATH}/$(basename ${file}) "
   done
 
-  local command="kubectl create secret generic ${secret_name} ${from_files}"
+  # Cromwell secrets don't need to be named in a build-specific way because they are scoped to a build-specific cluster.
+  local command="kubectl create secret generic cromwell-secrets ${from_files}"
   echo "Creating secrets with command: $command"
 
   cromwell::kube::gcloud_run_kubectl_command_as_service_account \
-    "${cluster_name}" "${command}"
+    "${KUBE_CLUSTER_NAME}" "${command}"
 }
 
 cromwell::private::kube::rendered_file_for_vtmpl() {
@@ -186,7 +180,6 @@ cromwell::private::build_render_vtmpl_command() {
 }
 
 cromwell::kube::start_cromwell() {
-  local clusterName="$1"
   cromwell::kube::gcloud_run_kubectl_command_as_service_account \
-    "${clusterName}" "kubectl apply -f ${DOCKER_ETC_PATH}/cromwell-service.yaml"
+    "${KUBE_CLUSTER_NAME}" "kubectl apply -f ${DOCKER_ETC_PATH}/cromwell-service.yaml"
 }
