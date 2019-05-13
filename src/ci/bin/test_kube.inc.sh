@@ -184,3 +184,9 @@ cromwell::private::build_render_vtmpl_command() {
   local IFS="|"
   echo -n "${seds[*]}"
 }
+
+cromwell::kube::start_cromwell() {
+  local clusterName="$1"
+  cromwell::kube::gcloud_run_kubectl_command_as_service_account \
+    "${clusterName}" "kubectl apply -f ${DOCKER_ETC_PATH}/cromwell-service.yaml"
+}
