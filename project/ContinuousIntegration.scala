@@ -3,6 +3,7 @@ import sbt._
 import sbt.io.Path._
 
 import scala.sys.process._
+import collection.JavaConverters._
 
 object ContinuousIntegration {
   val copyCiResources: TaskKey[Unit] = taskKey[Unit](s"Copy CI resources.")
@@ -11,6 +12,8 @@ object ContinuousIntegration {
   val srcCiResources: SettingKey[File] = settingKey[File]("Source directory for CI resources")
   val targetCiResources: SettingKey[File] = settingKey[File]("Target directory for CI resources")
   val vaultToken: SettingKey[File] = settingKey[File]("File with the vault token")
+
+  val ciEnvironmentVariablePrefix = "CI_ENVIRONMENT_VARIABLE_"
 
   val ciSettings: Seq[Setting[_]] = List(
     srcCiResources := sourceDirectory.value / "ci" / "resources",
@@ -40,9 +43,12 @@ object ContinuousIntegration {
         "-v", s"${targetCiResources.value}:${targetCiResources.value}",
         "-e", "ENVIRONMENT=not_used",
         "-e", s"INPUT_PATH=${srcCiResources.value}",
-        "-e", s"OUT_PATH=${targetCiResources.value}",
+        "-e", s"OUT_PATH=${targetCiResources.value}") ++
+      ciEnvironmentVariables ++
+      List(
         "broadinstitute/dsde-toolbox", "render-templates.sh"
       )
+
       val result = cmd ! log
       if (result != 0) {
         sys.error(
@@ -52,4 +58,13 @@ object ContinuousIntegration {
       }
     },
   )
+
+  lazy val ciEnvironmentVariables: List[String] = {
+    val prefix = "CI_ENVIRONMENT_VARIABLE_"
+
+    System.getenv().asScala.toList flatMap {
+      case (k, v) if k.startsWith(prefix) => List("-e", s"${k.substring(prefix.length)}=$v")
+      case _ => List.empty
+    }
+  }
 }

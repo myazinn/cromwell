@@ -180,6 +180,10 @@ cromwell::private::build_render_vtmpl_command() {
 }
 
 cromwell::kube::start_cromwell() {
-  cromwell::kube::gcloud_run_kubectl_command_as_service_account \
-    "${KUBE_CLUSTER_NAME}" "kubectl apply -f ${DOCKER_ETC_PATH}/cromwell-service.yaml"
+  for instance_type in frontend backend summarizer
+  do
+    KUBE_CROMWELL_INSTANCE_TYPE="${instance_type}"
+    cromwell::kube::gcloud_run_kubectl_command_as_service_account \
+      "${KUBE_CLUSTER_NAME}" "kubectl apply -f ${DOCKER_ETC_PATH}/cromwell-service.yaml"
+  done
 }

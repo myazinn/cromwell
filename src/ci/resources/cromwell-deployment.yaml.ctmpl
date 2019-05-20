@@ -1,0 +1,88 @@
+{{with $instanceType := env "KUBE_CROMWELL_INSTANCE_TYPE"}}
+{{with $cloudSqlConnectionName := env "KUBE_CLOUDSQL_CONNECTION_NAME"}}
+{{with $objectName := vault (printf "cromwell-%s" $instanceType)}}
+{{with $confName := vault (printf "kube_cromwell_%s.conf" $instanceType)}}
+{{with $replicaCount := env "KUBE_DEPLOYMENT_REPLICA_COUNT"}}
+
+
+# Only frontends get a Service.
+{{if eq $instanceType "frontend"}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cromwell-frontend
+  labels:
+    app: cromwell-frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: cromwell-frontend
+  ports:
+    - protocol: TCP
+      port: 8000
+      name: http
+    - protocol: TCP
+      port: 3306
+      name: mysql
+{{end}}
+
+---
+
+# All instance types get a Deployment. Content-wise they differ only in conf and replica count.
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: {{$objectName}}
+spec:
+  selector:
+    matchLabels:
+      app: {{$objectName}}
+  replicas: {{$replicaCount}}
+  template:
+    metadata:
+      labels:
+        app: {{$objectName}}
+      spec:
+        containers:
+          - name: {{$objectName}}
+            image: broadinstitute/cromwell:40
+            command: ["java"]
+            args: ["-Dconfig.file={{$confName}}", "-jar", "/app/cromwell.jar", "server"]
+            env:
+              - name: GOOGLE_SERVICE_ACCOUNT_JSON
+                value: /conf/cromwell-centaur-service-account.json
+              - name: GOOGLE_REQUESTER_PAYS_SERVICE_ACCOUNT_JSON
+                value: /conf/cromwell-centaur-requester-pays-service-account.json
+            ports:
+              - containerPort: 8000
+            livenessProbe:
+              httpGet:
+                path: /engine/v1/status
+                port: 8000
+              initialDelaySeconds: 30
+              timeoutSeconds: 5
+            volumeMounts:
+              - name: conf
+                mountPath: "/conf"
+                readOnly: true
+          - name: cloudsql-proxy
+            image: gcr.io/cloudsql-docker/gce-proxy:1.12
+            command: ["/cloud_sql_proxy"]
+            args: ["-instances={{$cloudSqlConnectionName}}=tcp:0.0.0.0:3306", "-credential_file=/conf/cromwell-centaur-service-account.json"]
+            ports:
+              - containerPort: 3306
+            livenessProbe:
+              exec:
+                command: ["nc", "-z", "127.0.0.1", "3306"]
+              initialDelaySeconds: 5
+              timeoutSeconds: 3
+            volumeMounts:
+              - name: conf
+                mountPath: "/conf"
+                readOnly: true
+        volumes:
+          - name: conf
+            secret:
+              secretName: cromwell-secrets
+
+{{end}}{{end}}{{end}}{{end}}{{end}}{{end}}
