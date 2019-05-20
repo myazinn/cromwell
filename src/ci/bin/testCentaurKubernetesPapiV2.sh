@@ -3,11 +3,7 @@
 set -o errexit -o nounset -o pipefail
 export CROMWELL_BUILD_REQUIRES_SECURE=true
 
-# Right now these are hardcoded, eventually they should be generated. In order to have the variables rendered in template
-# files they would need to be defined before cromwell::build::setup_common_environment runs, which currently means they
-# would need to be defined before test.inc.sh is loaded (transitively or directly).
-#KUBE_CLUSTER_NAME="mlc-k8s-3-2"
-#KUBE_CLOUDSQL_CONNECTION_NAME="broad-dsde-cromwell-dev:us-central1:mlc-cloudsql-k8s-experiments"
+# TODO wire in image build and GCR push.
 KUBE_CROMWELL_IMAGE="broadinstitute/cromwell:41"
 
 # import in shellcheck / CI / IntelliJ compatible ways
@@ -16,13 +12,14 @@ source "${BASH_SOURCE%/*}/test_kube.inc.sh" || source test_kube.inc.sh
 
 KUBE_CLUSTER_NAME=$(cromwell::kube::generate_gke_cluster_name)
 cromwell::kube::create_gke_cluster ${KUBE_CLUSTER_NAME}
+
 KUBE_CLOUDSQL_INSTANCE_NAME="$(cromwell::kube::generate_cloud_sql_instance_name)"
 cromwell::kube::create_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME}
 # Get the connectionName for this newly created instance. This is what the Cloud SQL proxies will need for their -instances parameter.
 KUBE_CLOUDSQL_CONNECTION_NAME="$(cromwell::kube::connection_name_for_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME})"
 echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
 
-cromwell::kube::create_deployment_templates
+cromwell::kube::create_deployment_files
 cromwell::kube::create_secrets
 cromwell::kube::start_cromwell
 

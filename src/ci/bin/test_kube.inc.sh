@@ -170,7 +170,7 @@ cromwell::kube::private::build_environment_variable_arguments() {
   echo ${ret}
 }
 
-cromwell::kube::create_deployment_templates() {
+cromwell::kube::create_deployment_files() {
   local dtmpl="${CROMWELL_BUILD_RESOURCES_SOURCES}/cromwell-deployment.yaml.dtmpl"
 
   for type in frontend backend summarizer
