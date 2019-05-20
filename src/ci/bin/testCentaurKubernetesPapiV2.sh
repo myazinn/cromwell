@@ -10,10 +10,11 @@ export CROMWELL_BUILD_REQUIRES_SECURE=true
 # shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/test_kube.inc.sh" || source test_kube.inc.sh
 
-GCR_TAG=$(cromwell::kube::generate_gcr_tag)
-CROMWELL_SBT_DOCKER_TAGS="just-testing" sbt server/docker
+DUMMY_IMAGE="just-testing"
+KUBE_CROMWELL_IMAGE=$(cromwell::kube::generate_gcr_tag)
+CROMWELL_SBT_DOCKER_TAGS=${DUMMY_IMAGE} sbt server/docker
 cromwell::kube::gcr_login
-cromwell::kube::push_to_gcr ${GCR_TAG}
+cromwell::kube::push_to_gcr ${DUMMY_IMAGE} ${KUBE_CROMWELL_IMAGE}
 
 #KUBE_CLUSTER_NAME=$(cromwell::kube::generate_gke_cluster_name)
 #cromwell::kube::create_gke_cluster ${KUBE_CLUSTER_NAME}
