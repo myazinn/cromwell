@@ -1,16 +1,17 @@
 #!/bin/bash
 set -e
 
-
 VAULT_TOKEN=$(cat /etc/vault-token-dsde)
 
 DOCKER_ETC_PATH=/usr/share/etc
 
 mkdir -p mnt
 
+# Read the DB password from vault:
 DB_PASS=`docker run --rm -e VAULT_TOKEN=$VAULT_TOKEN \
 	broadinstitute/dsde-toolbox vault read -format=json secret/dsp/cromwell/perf | jq '.data.db_pass'`
 
+# Read the service account credentials from vault:
 docker run --rm -e VAULT_TOKEN=$VAULT_TOKEN broadinstitute/dsde-toolbox vault read -format=json secret/dsp/cromwell/perf/service-account-deployer | jq -r '.data.service_account' > mnt/sa.json
 
 # Clone the CloudSQL DB
