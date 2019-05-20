@@ -10,6 +10,10 @@ GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON="cromwell-centaur-service-account.json"
 GOOGLE_ZONE=us-central1-c
 DOCKER_ETC_PATH=/usr/share/etc
 
+cromwell::build::setup_common_environment
+
+cromwell::build::setup_centaur_environment
+
 GOOGLE_PROJECT=$(cat "$CROMWELL_BUILD_RESOURCES_DIRECTORY/$GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON" | jq -r .project_id)
 
 # Takes a single string argument and `echo`s a possibly modified version of that argument with non-alphanumeric
