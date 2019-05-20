@@ -125,6 +125,7 @@ cromwell::kube::gcr_login() {
 
 cromwell::kube::push_to_gcr() {
   local tag="$1"
+  docker tag broadinstitute/cromwell:just-testing ${tag}
   docker push ${tag}
 }
 
