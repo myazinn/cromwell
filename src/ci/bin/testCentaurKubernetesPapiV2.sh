@@ -3,9 +3,6 @@
 set -o errexit -o nounset -o pipefail
 export CROMWELL_BUILD_REQUIRES_SECURE=true
 
-# TODO wire in image build and GCR push.
-#KUBE_CROMWELL_IMAGE="broadinstitute/cromwell:41"
-
 # import in shellcheck / CI / IntelliJ compatible ways
 # shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/test_kube.inc.sh" || source test_kube.inc.sh
@@ -16,22 +13,18 @@ CROMWELL_SBT_DOCKER_TAGS=${DUMMY_IMAGE} sbt server/docker
 cromwell::kube::gcr_login
 cromwell::kube::push_to_gcr ${DUMMY_IMAGE} ${KUBE_CROMWELL_IMAGE}
 
-#KUBE_CLUSTER_NAME=$(cromwell::kube::generate_gke_cluster_name)
-#cromwell::kube::create_gke_cluster ${KUBE_CLUSTER_NAME}
-KUBE_CLUSTER_NAME=centaur-gke-cluster-travis-27999-1
+KUBE_CLUSTER_NAME=$(cromwell::kube::generate_gke_cluster_name)
+cromwell::kube::create_gke_cluster ${KUBE_CLUSTER_NAME}
 
-#KUBE_CLOUDSQL_INSTANCE_NAME="$(cromwell::kube::generate_cloud_sql_instance_name)"
-#cromwell::kube::create_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME}
+KUBE_CLOUDSQL_INSTANCE_NAME="$(cromwell::kube::generate_cloud_sql_instance_name)"
+cromwell::kube::create_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME}
 # Get the connectionName for this newly created instance. This is what the Cloud SQL proxies will need for their -instances parameter.
-#KUBE_CLOUDSQL_CONNECTION_NAME="$(cromwell::kube::connection_name_for_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME})"
-#echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
-KUBE_CLOUDSQL_INSTANCE_NAME=centaur-gke-cloudsql-travis-27999-1
-KUBE_CLOUDSQL_CONNECTION_NAME=broad-dsde-cromwell-dev:us-central1:centaur-gke-cloudsql-travis-27999-1
+KUBE_CLOUDSQL_CONNECTION_NAME="$(cromwell::kube::connection_name_for_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME})"
+echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
 
-#cromwell::kube::create_deployment_files
-#cromwell::kube::create_secrets
-#cromwell::kube::start_cromwell
-
+cromwell::kube::create_deployment_files
+cromwell::kube::create_secrets
+cromwell::kube::start_cromwell
 
 # Setting these variables should cause the associated config values to be rendered into centaur_application_horicromtal.conf
 # There should probably be more indirections in CI scripts but that can wait.
