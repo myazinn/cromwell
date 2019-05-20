@@ -8,11 +8,13 @@ export CROMWELL_BUILD_REQUIRES_SECURE=true
 # would need to be defined before test.inc.sh is loaded (transitively or directly).
 KUBE_CLUSTER_NAME="mlc-gke-k8s"
 KUBE_CLOUDSQL_CONNECTION_NAME="broad-dsde-cromwell-dev:us-central1:mlc-cloudsql-k8s-experiments"
-export_template_variables
+KUBE_CROMWELL_IMAGE="broadinstitute/cromwell:41"
 
 # import in shellcheck / CI / IntelliJ compatible ways
 # shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/test_kube.inc.sh" || source test_kube.inc.sh
+
+cromwell::kube::create_deployment_templates
 
 # Setting these variables should cause the associated config values to be rendered into centaur_application_horicromtal.conf
 # There should probably be more indirections in CI scripts but that can wait.
@@ -31,12 +33,13 @@ export GOOGLE_AUTH_MODE
 export GOOGLE_REFRESH_TOKEN_PATH
 export TEST_CROMWELL_COMPOSE_FILE="${CROMWELL_BUILD_ROOT_DIRECTORY}/scripts/docker-compose-mysql/docker-compose-horicromtal.yml"
 
+# this is probably vestigial and should just be deleted but not 100% sure
 # Copy rendered files
-mkdir -p "${CROMWELL_BUILD_CENTAUR_TEST_RENDERED}"
-cp \
-    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/private_docker_papi_v2_usa.options" \
-    "${TEST_CROMWELL_COMPOSE_FILE}" \
-    "${CROMWELL_BUILD_CENTAUR_TEST_RENDERED}"
+#mkdir -p "${CROMWELL_BUILD_CENTAUR_TEST_RENDERED}"
+#cp \
+#    "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/private_docker_papi_v2_usa.options" \
+#    "${TEST_CROMWELL_COMPOSE_FILE}" \
+#    "${CROMWELL_BUILD_CENTAUR_TEST_RENDERED}"
 
 # Temporarily turning GKE cluster stuff off as it's unnecessary for testing Cloud SQL stuff.
 #
@@ -54,12 +57,6 @@ cp \
 #KUBE_CLOUDSQL_CONNECTION_NAME="$(cromwell::kube::connection_name_for_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME})"
 #echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
 #
-
-
-# re-render the resources with environment variables set
-# yeah I know it says private, that's the least of my concerns atm
-# cromwell::private::setup_secure_resources
-
 
 # temp comment out for testing
 #cromwell::kube::create_secrets
@@ -108,12 +105,3 @@ cp \
 #
 #cromwell::build::generate_code_coverage
 
-# Set 'CI_TEMPLATE_ENV_' environment variables for Consul template rendering.
-export_template_variables() {
-  for e in $(compgen -v | grep '^KUBE_')
-  do
-    value=$(eval echo "\${${e}}")
-    cmd="export CI_TEMPLATE_ENV_${e}=${value}"
-    eval ${cmd}
-  done
-}

@@ -1,12 +1,13 @@
 {{with $instanceType := env "KUBE_CROMWELL_INSTANCE_TYPE"}}
 {{with $cloudSqlConnectionName := env "KUBE_CLOUDSQL_CONNECTION_NAME"}}
-{{with $objectName := vault (printf "cromwell-%s" $instanceType)}}
-{{with $confName := vault (printf "kube_cromwell_%s.conf" $instanceType)}}
+{{with $objectName := printf "cromwell-%s" $instanceType}}
+{{with $confName := printf "kube_cromwell_%s.conf" $instanceType}}
 {{with $replicaCount := env "KUBE_DEPLOYMENT_REPLICA_COUNT"}}
+{{with $cromwellImage := env "KUBE_CROMWELL_IMAGE"}}
 
-
-# Only frontends get a Service.
 {{if eq $instanceType "frontend"}}
+# Only frontends get a Service.
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -26,9 +27,6 @@ spec:
       name: mysql
 {{end}}
 
----
-
-# All instance types get a Deployment. Content-wise they differ only in conf and replica count.
 apiVersion: v1
 kind: Deployment
 metadata:
@@ -45,7 +43,7 @@ spec:
       spec:
         containers:
           - name: {{$objectName}}
-            image: broadinstitute/cromwell:40
+            image: {{$cromwellImage}}
             command: ["java"]
             args: ["-Dconfig.file={{$confName}}", "-jar", "/app/cromwell.jar", "server"]
             env:
@@ -85,4 +83,4 @@ spec:
             secret:
               secretName: cromwell-secrets
 
-{{end}}{{end}}{{end}}{{end}}{{end}}
+{{end}}{{end}}{{end}}{{end}}{{end}}{{end}}

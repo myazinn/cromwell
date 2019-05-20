@@ -1,4 +1,5 @@
 {{with $cloudSqlConnectionName := env "KUBE_CLOUDSQL_CONNECTION_NAME"}}
+{{with $cromwellImage := env "KUBE_CROMWELL_IMAGE"}}
 
 ---
 apiVersion: v1
@@ -28,7 +29,7 @@ metadata:
 spec:
   containers:
     - name: cromwell
-      image: broadinstitute/cromwell:40
+      image: {{$cromwellImage}}
       command: ["java"]
       args: ["-Dconfig.file=/conf/kube_cromwell.conf", "-jar", "/app/cromwell.jar", "server"]
       env:
@@ -68,4 +69,4 @@ spec:
       secret:
         secretName: cromwell-secrets
 
-{{end}}
+{{end}}{{end}}

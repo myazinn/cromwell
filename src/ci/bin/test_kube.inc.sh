@@ -158,3 +158,35 @@ cromwell::kube::start_cromwell() {
       "${KUBE_CLUSTER_NAME}" "kubectl apply -f ${DOCKER_ETC_PATH}/cromwell-service.yaml"
   done
 }
+
+cromwell::kube::private::build_environment_variable_arguments() {
+  local ret=""
+  for e in $(compgen -v | grep '^KUBE_')
+  do
+    value=$(eval echo "\${${e}}")
+    ret+=" --env ${e}=${value} "
+  done
+  echo ${ret}
+}
+
+cromwell::kube::create_deployment_templates() {
+  local dtmpl="${CROMWELL_BUILD_RESOURCES_SOURCES}/cromwell-deployment.yaml.dtmpl"
+
+  for type in frontend backend summarizer
+  do
+    KUBE_CROMWELL_INSTANCE_TYPE="${type}"
+    if [[ "${type}" == "frontend" ]]; then
+      KUBE_DEPLOYMENT_REPLICA_COUNT=2
+    elif [[ "${type}" == "backend" ]]; then
+      KUBE_DEPLOYMENT_REPLICA_COUNT=3
+    elif [[ "${type}" == "summarizer" ]]; then
+      KUBE_DEPLOYMENT_REPLICA_COUNT=1
+    fi
+
+    local env=$(cromwell::kube::private::build_environment_variable_arguments)
+
+    local outfile="${CROMWELL_BUILD_RESOURCES_DIRECTORY}/${type}-cromwell-deployment.yaml"
+    local command="docker run --rm ${env} -v ${CROMWELL_BUILD_RESOURCES_SOURCES}:${CROMWELL_BUILD_RESOURCES_SOURCES} -v ${CROMWELL_BUILD_RESOURCES_DIRECTORY}:${CROMWELL_BUILD_RESOURCES_DIRECTORY} -it broadinstitute/dsde-toolbox consul-template -once -template=${dtmpl}:${outfile}"
+    eval ${command}
+  done
+}
