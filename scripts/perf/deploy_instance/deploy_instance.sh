@@ -31,7 +31,7 @@ metadata=(
   "CROMWELL_PERF_SCRIPTS_BRANCH=${REPO_BRANCH}"
 )
 
-cp deploy_instance/run_on_instance.sh mnt/
+cp scripts/perf/deploy_instance/run_on_instance.sh mnt/
 
 docker run --name perf_gcloud_$BUILD_NUMBER -v "$(pwd)"/mnt:$DOCKER_ETC_PATH --rm google/cloud-sdk:slim /bin/bash -c "\
     gcloud auth activate-service-account --key-file $DOCKER_ETC_PATH/sa.json &&\
