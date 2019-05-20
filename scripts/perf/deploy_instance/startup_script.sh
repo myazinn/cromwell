@@ -21,7 +21,6 @@ echo "net.ipv4.ip_forward = 1" > /etc/sysctl.conf
 
 # Set up env variables
 addVar CROMWELL_BRANCH=$(extract_metadata CROMWELL_PERF_SCRIPTS_BRANCH)
-addVar TEST_CASE_DIRECTORY=$(extract_metadata TEST_CASE_DIRECTORY)
 addVar CLOUD_SQL_DB_USER=$(extract_metadata CROMWELL_DB_USER)
 addVar CLOUD_SQL_DB_PASSWORD=$(extract_metadata CROMWELL_DB_PASS)
 addVar CLOUD_SQL_INSTANCE=$(extract_metadata CLOUD_SQL_INSTANCE)
@@ -30,10 +29,7 @@ addVar CROMWELL_PROJECT=$(extract_metadata CROMWELL_PROJECT)
 addVar CROMWELL_EXECUTION_ROOT=$(extract_metadata CROMWELL_BUCKET)
 addVar CROMWELL_STATSD_HOST=$(extract_metadata CROMWELL_STATSD_HOST)
 addVar CROMWELL_STATSD_PORT=$(extract_metadata CROMWELL_STATSD_PORT)
-addVar GCS_REPORT_BUCKET=$(extract_metadata GCS_REPORT_BUCKET)
-addVar GCS_REPORT_PATH=$(extract_metadata GCS_REPORT_PATH)
 addVar BUILD_ID=$(extract_metadata BUILD_TAG)
-addVar CLEAN_UP=$(extract_metadata CLEAN_UP)
 
 # Use the instance name as statsd prefix to avoid metrics collisions
 addVar CROMWELL_STATSD_PREFIX=${BUILD_ID}
