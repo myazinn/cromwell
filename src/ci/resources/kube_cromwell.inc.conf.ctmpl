@@ -11,8 +11,8 @@ database.db.password = "{{$cromwellCentaurGKE.Data.db_pass}}"
 # Obvs can't have this for when this build gets Centaured but useful for now
 call-caching.enabled=false
 
-# Metadata summarization values used by frontends and backends, must be overridden in summarizer.
-services.MetadataService.config.metadata-summary-refresh-limit=0
+services.MetadataService.config.metadata-summary-refresh-limit=10000
+# Metadata refresh interval used by frontends and backends, must be overridden in summarizer.
 services.MetadataService.config.metadata-summary-refresh-interval = "Inf"
 
 # Workflow launch values used by frontends and summarizer, must be overridden in backends.

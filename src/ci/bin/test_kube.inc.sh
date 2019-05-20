@@ -97,7 +97,7 @@ cromwell::kube::generate_gke_cluster_name() {
 cromwell::kube::create_gke_cluster() {
   local gkeClusterName="$1"
   cromwell::kube::gcloud_run_as_service_account \
-    "gcloud --project $GOOGLE_PROJECT container clusters create --zone $GOOGLE_ZONE $gkeClusterName --num-nodes=3"
+    "gcloud --project $GOOGLE_PROJECT container clusters create --zone $GOOGLE_ZONE $gkeClusterName --machine-type=n1-standard-2 --num-nodes=3"
 
   echo -n ${gkeClusterName}
 }
@@ -142,7 +142,8 @@ cromwell::kube::create_secrets() {
     from_files+="--from-file=${DOCKER_ETC_PATH}/$(basename ${file}) "
   done
 
-  # Cromwell secrets don't need to be named in a build-specific way because they are scoped to a build-specific cluster.
+  # In the final version of this Cromwell secrets will not need to be named in a build-specific way because they will be
+  # scoped to build-specific clusters. But for testing the cluster is currently fixed, so this better not exist beforehand.
   local command="kubectl create secret generic cromwell-secrets ${from_files}"
   echo "Creating secrets with command: $command"
 
@@ -155,7 +156,7 @@ cromwell::kube::start_cromwell() {
   do
     KUBE_CROMWELL_INSTANCE_TYPE="${instance_type}"
     cromwell::kube::gcloud_run_kubectl_command_as_service_account \
-      "${KUBE_CLUSTER_NAME}" "kubectl apply -f ${DOCKER_ETC_PATH}/cromwell-service.yaml"
+      "${KUBE_CLUSTER_NAME}" "kubectl apply -f ${DOCKER_ETC_PATH}/${instance_type}-cromwell-deployment.yaml"
   done
 }
 
@@ -187,6 +188,7 @@ cromwell::kube::create_deployment_templates() {
 
     local outfile="${CROMWELL_BUILD_RESOURCES_DIRECTORY}/${type}-cromwell-deployment.yaml"
     local command="docker run --rm ${env} -v ${CROMWELL_BUILD_RESOURCES_SOURCES}:${CROMWELL_BUILD_RESOURCES_SOURCES} -v ${CROMWELL_BUILD_RESOURCES_DIRECTORY}:${CROMWELL_BUILD_RESOURCES_DIRECTORY} -it broadinstitute/dsde-toolbox consul-template -once -template=${dtmpl}:${outfile}"
+    echo "deployment template: ${command}"
     eval ${command}
   done
 }

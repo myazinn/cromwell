@@ -25,9 +25,10 @@ spec:
     - protocol: TCP
       port: 3306
       name: mysql
+---
 {{end}}
 
-apiVersion: v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{$objectName}}
@@ -40,47 +41,47 @@ spec:
     metadata:
       labels:
         app: {{$objectName}}
-      spec:
-        containers:
-          - name: {{$objectName}}
-            image: {{$cromwellImage}}
-            command: ["java"]
-            args: ["-Dconfig.file={{$confName}}", "-jar", "/app/cromwell.jar", "server"]
-            env:
-              - name: GOOGLE_SERVICE_ACCOUNT_JSON
-                value: /conf/cromwell-centaur-service-account.json
-              - name: GOOGLE_REQUESTER_PAYS_SERVICE_ACCOUNT_JSON
-                value: /conf/cromwell-centaur-requester-pays-service-account.json
-            ports:
-              - containerPort: 8000
-            livenessProbe:
-              httpGet:
-                path: /engine/v1/status
-                port: 8000
-              initialDelaySeconds: 30
-              timeoutSeconds: 5
-            volumeMounts:
-              - name: conf
-                mountPath: "/conf"
-                readOnly: true
-          - name: cloudsql-proxy
-            image: gcr.io/cloudsql-docker/gce-proxy:1.12
-            command: ["/cloud_sql_proxy"]
-            args: ["-instances={{$cloudSqlConnectionName}}=tcp:0.0.0.0:3306", "-credential_file=/conf/cromwell-centaur-service-account.json"]
-            ports:
-              - containerPort: 3306
-            livenessProbe:
-              exec:
-                command: ["nc", "-z", "127.0.0.1", "3306"]
-              initialDelaySeconds: 5
-              timeoutSeconds: 3
-            volumeMounts:
-              - name: conf
-                mountPath: "/conf"
-                readOnly: true
-        volumes:
-          - name: conf
-            secret:
-              secretName: cromwell-secrets
+    spec:
+      containers:
+        - name: {{$objectName}}
+          image: {{$cromwellImage}}
+          command: ["java"]
+          args: ["-Dconfig.file=/conf/{{$confName}}", "-jar", "/app/cromwell.jar", "server"]
+          env:
+            - name: GOOGLE_SERVICE_ACCOUNT_JSON
+              value: /conf/cromwell-centaur-service-account.json
+            - name: GOOGLE_REQUESTER_PAYS_SERVICE_ACCOUNT_JSON
+              value: /conf/cromwell-centaur-requester-pays-service-account.json
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /engine/v1/status
+              port: 8000
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: conf
+              mountPath: "/conf"
+              readOnly: true
+        - name: cloudsql-proxy
+          image: gcr.io/cloudsql-docker/gce-proxy:1.12
+          command: ["/cloud_sql_proxy"]
+          args: ["-instances={{$cloudSqlConnectionName}}=tcp:0.0.0.0:3306", "-credential_file=/conf/cromwell-centaur-service-account.json"]
+          ports:
+            - containerPort: 3306
+          livenessProbe:
+            exec:
+              command: ["nc", "-z", "127.0.0.1", "3306"]
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: conf
+              mountPath: "/conf"
+              readOnly: true
+      volumes:
+        - name: conf
+          secret:
+            secretName: cromwell-secrets
 
 {{end}}{{end}}{{end}}{{end}}{{end}}{{end}}

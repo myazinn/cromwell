@@ -6,7 +6,7 @@ export CROMWELL_BUILD_REQUIRES_SECURE=true
 # Right now these are hardcoded, eventually they should be generated. In order to have the variables rendered in template
 # files they would need to be defined before cromwell::build::setup_common_environment runs, which currently means they
 # would need to be defined before test.inc.sh is loaded (transitively or directly).
-KUBE_CLUSTER_NAME="mlc-gke-k8s"
+KUBE_CLUSTER_NAME="mlc-k8s-3-2"
 KUBE_CLOUDSQL_CONNECTION_NAME="broad-dsde-cromwell-dev:us-central1:mlc-cloudsql-k8s-experiments"
 KUBE_CROMWELL_IMAGE="broadinstitute/cromwell:41"
 
@@ -15,6 +15,9 @@ KUBE_CROMWELL_IMAGE="broadinstitute/cromwell:41"
 source "${BASH_SOURCE%/*}/test_kube.inc.sh" || source test_kube.inc.sh
 
 cromwell::kube::create_deployment_templates
+cromwell::kube::create_secrets
+cromwell::kube::start_cromwell
+
 
 # Setting these variables should cause the associated config values to be rendered into centaur_application_horicromtal.conf
 # There should probably be more indirections in CI scripts but that can wait.
@@ -58,16 +61,8 @@ export TEST_CROMWELL_COMPOSE_FILE="${CROMWELL_BUILD_ROOT_DIRECTORY}/scripts/dock
 #echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
 #
 
-# temp comment out for testing
-#cromwell::kube::create_secrets
-#cromwell::kube::start_cromwell
-
 ## TODO Move this to the "cleanup" section of the script once there is also a "do real work" section.
 #cromwell::kube::destroy_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME}
-
-# Just use Cromwell 40 for testing GCR pushes and deletes. IRL this script would obvs build the image rather than pull it.
-#DOCKER_IMAGE="broadinstitute/cromwell:40"
-#docker pull $DOCKER_IMAGE
 
 # Temporarily turning GCR push off as it's unnecessary for testing Cloud SQL proxy stuff.
 #GCR_TAG=$(cromwell::kube::generate_gcr_tag)
@@ -76,23 +71,6 @@ export TEST_CROMWELL_COMPOSE_FILE="${CROMWELL_BUILD_ROOT_DIRECTORY}/scripts/dock
 #cromwell::kube::push_to_gcr ${GCR_TAG}
 # TODO Move this to the "cleanup" section of the script once there is also a "do real work" section.
 #cromwell::kube::delete_from_gcr ${GCR_TAG}
-
-# - spin up a CloudIP service fronting said MySQL container
-# - spin up a uni-Cromwell that talks to said MySQL
-# - spin up a LoadBalancer service that fronts this Cromwell
-#
-# Run the Centaur test suite against this Cromwell service.
-
-# Phase 1. Even this is PAPI since Cromwell will be running in a Docker container and trying to run Docker in Docker
-#          currently no es bueno.
-# - spin up a MySQL container expressing a PersistentVolumeClaim
-# - spin up a CloudIP service fronting said MySQL container
-# - spin up a uni-Cromwell that talks to said MySQL
-# - spin up a LoadBalancer service that fronts this Cromwell
-#
-# Run the Centaur test suite against this Cromwell service.
-
-# Phase 2 same as Phase 1 except separate Cromwells for summarizer, frontend, backend.
 
 #docker image ls -q broadinstitute/cromwell:"${TEST_CROMWELL_TAG}" | grep . || \
 #CROMWELL_SBT_DOCKER_TAGS="${TEST_CROMWELL_TAG}" sbt server/docker
