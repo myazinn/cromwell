@@ -44,7 +44,7 @@ object ContinuousIntegration {
         "-e", "ENVIRONMENT=not_used",
         "-e", s"INPUT_PATH=${srcCiResources.value}",
         "-e", s"OUT_PATH=${targetCiResources.value}") ++
-      ciEnvironmentVariables ++
+      ciTemplateEnvironmentVariables ++
       List(
         "broadinstitute/dsde-toolbox", "render-templates.sh"
       )
@@ -59,8 +59,8 @@ object ContinuousIntegration {
     },
   )
 
-  lazy val ciEnvironmentVariables: List[String] = {
-    val prefix = "CI_ENVIRONMENT_VARIABLE_"
+  lazy val ciTemplateEnvironmentVariables: List[String] = {
+    val prefix = "CI_TEMPLATE_ENV_"
 
     System.getenv().asScala.toList flatMap {
       case (k, v) if k.startsWith(prefix) => List("-e", s"${k.substring(prefix.length)}=$v")

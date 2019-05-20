@@ -49,9 +49,16 @@ cp \
 KUBE_CLUSTER_NAME="mlc-gke-k8s"
 KUBE_CLOUDSQL_CONNECTION_NAME="broad-dsde-cromwell-dev:us-central1:mlc-cloudsql-k8s-experiments"
 
-# All environment variables named like KUBE_FOO_NAME
-KUBE_VARIABLES=$(compgen -v | grep '^KUBE.*NAME$')
-cromwell::kube::render_vtmpl_resources ${KUBE_VARIABLES}
+# Set 'CI_TEMPLATE_ENV_' environment variables for Consul template rendering.
+for e in $(compgen -v | grep '^KUBE_')
+do
+  value=$(eval echo "\${${e}}")
+  cmd="export CI_TEMPLATE_ENV_${e}=${value}"
+  eval ${cmd}
+done
+
+cromwell::build::setup_common_environment
+cromwell::build::setup_centaur_environment
 
 cromwell::kube::create_secrets
 cromwell::kube::start_cromwell

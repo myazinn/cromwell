@@ -1,3 +1,5 @@
+{{with $cloudSqlConnectionName := env "KUBE_CLOUDSQL_CONNECTION_NAME"}}
+
 ---
 apiVersion: v1
 kind: Service
@@ -30,7 +32,7 @@ spec:
         - name: cloudsql-proxy
           image: gcr.io/cloudsql-docker/gce-proxy:1.12
           command: ["/cloud_sql_proxy"]
-          args: ["-instances=KUBE_CLOUDSQL_CONNECTION_NAME=tcp:0.0.0.0:3306", "-credential_file=/conf/cromwell-centaur-service-account.json"]
+          args: ["-instances={{$cloudSqlConnectionName}}=tcp:0.0.0.0:3306", "-credential_file=/conf/cromwell-centaur-service-account.json"]
           ports:
             - containerPort: 3306
           livenessProbe:
@@ -46,3 +48,5 @@ spec:
         - name: conf
           secret:
             secretName: cromwell-secrets
+
+{{end}}

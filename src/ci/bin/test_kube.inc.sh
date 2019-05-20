@@ -10,10 +10,6 @@ GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON="cromwell-centaur-service-account.json"
 GOOGLE_ZONE=us-central1-c
 DOCKER_ETC_PATH=/usr/share/etc
 
-cromwell::build::setup_common_environment
-
-cromwell::build::setup_centaur_environment
-
 GOOGLE_PROJECT=$(cat "$CROMWELL_BUILD_RESOURCES_DIRECTORY/$GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON" | jq -r .project_id)
 
 # Takes a single string argument and `echo`s a possibly modified version of that argument with non-alphanumeric
@@ -148,35 +144,6 @@ cromwell::kube::create_secrets() {
 
   cromwell::kube::gcloud_run_kubectl_command_as_service_account \
     "${KUBE_CLUSTER_NAME}" "${command}"
-}
-
-cromwell::private::kube::rendered_file_for_vtmpl() {
-  local file="$1"
-  echo -n "${CROMWELL_BUILD_RESOURCES_DIRECTORY}/$(basename ${file%.vtmpl})"
-}
-
-# Takes an arbitrary number of environment variable names (*not* values). For all *.vtmpl files in the resources directory,
-# replace text matching the name of each environment variable by the value of that environment variable.
-# Redirect output to a file named the same as the input file minus the .vtmpl extension.
-cromwell::kube::render_vtmpl_resources() {
-  local seds=$(cromwell::private::build_render_vtmpl_command $*)
-  for file in $(find ${CROMWELL_BUILD_RESOURCES_SOURCES} -name '*.vtmpl')
-  do
-    local outfile=$(cromwell::private::kube::rendered_file_for_vtmpl ${file})
-    local command="cat ${file} | ${seds} > ${outfile}"
-    eval "${command}"
-    echo "Rendering ${file} -> ${outfile}"
-  done
-}
-
-cromwell::private::build_render_vtmpl_command() {
-  local seds=()
-  for var in $*
-  do
-    seds+=(" sed 's/${var}/${!var}/g' ")
-  done
-  local IFS="|"
-  echo -n "${seds[*]}"
 }
 
 cromwell::kube::start_cromwell() {
