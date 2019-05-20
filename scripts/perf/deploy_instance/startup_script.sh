@@ -48,47 +48,8 @@ git clone -b ${CROMWELL_BRANCH} --depth 1 --single-branch https://github.com/bro
 
 source ${PERF_ROOT}/helper.inc.sh
 
-if [ -n "${TEST_CASE_DIRECTORY}" ]
-then
-    # Must be a directory
-    TEST_WORKFLOW_DIR=${TEST_WORKFLOW_ROOT}/${TEST_CASE_DIRECTORY}
-    
-    # If it contains a custom cromwell configuration, use that 
-    if [ -f "${TEST_WORKFLOW_DIR}/cromwell.conf" ]
-    then
-        addVar CROMWELL_CONF_DIR=${TEST_WORKFLOW_DIR}
-        # copy the default one next to it so we can include it
-        cp ${PERF_ROOT}/vm_scripts/cromwell/cromwell.conf ${CROMWELL_CONF_DIR}/cromwell_default.conf
-    else
-        # Otherwise use the default one
-        addVar CROMWELL_CONF_DIR=${PERF_ROOT}/vm_scripts/cromwell
-    fi
-    
-    # If it contains a custom centaur configuration, use that 
-    if [ -f "${TEST_WORKFLOW_DIR}/centaur.conf" ]
-    then
-        addVar CENTAUR_CONF_DIR=${TEST_WORKFLOW_DIR}
-        # copy the default one next to it so we can include it
-        cp ${PERF_ROOT}/vm_scripts/centaur/centaur.conf ${CENTAUR_CONF_DIR}/centaur_default.conf
-    else
-        # Otherwise use the default one
-        addVar CENTAUR_CONF_DIR=${PERF_ROOT}/vm_scripts/centaur
-    fi
-    
-    addVar CENTAUR_TEST_FILE=$(ls ${TEST_WORKFLOW_DIR}/*.test | head)
-    sed -i "s/\$BRANCH/${CROMWELL_BRANCH}/" ${CENTAUR_TEST_FILE}
-fi
+addVar CROMWELL_CONF_DIR=${PERF_ROOT}/vm_scripts/cromwell
 
 # Start cromwell and cloud sql proxy
 prepare_statsd_proxy
 docker-compose -f ${PERF_ROOT}/vm_scripts/docker-compose.yml up -d
-
-if [ -n "$CENTAUR_TEST_FILE" ]
-then
-    wait_for_cromwell
-    run_test
-else
-    echo "No workflow provided, shutting down"
-fi
-
-shutdown
