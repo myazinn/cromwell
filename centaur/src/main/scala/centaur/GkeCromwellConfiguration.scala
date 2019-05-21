@@ -6,13 +6,18 @@ import better.files.File
 import com.typesafe.config.Config
 
 
-case class GkeCromwellConfiguration(dockerTag: String, dockerComposeFile: String, conf: String, logFile: String) extends CromwellConfiguration {
+case class GkeCromwellConfiguration(startCommand: Array[String], stopCommand: Array[String], logFile: String) extends CromwellConfiguration {
+  // Assumptions: A Cloud SQL instance has been built, a Docker image has been pushed to GCR, a GKE cluster has been built
+  // and hosts 3 Cromwell deployments:
+  // - a summarizer deployment with a single instance
+  // - some number of frontend instances fronted by a LoadBalancer service.
+  // - zero backend instances (the deployment is defined though).
+  //
+  // For now `start`ing and `stop`ing will be defined as scaling the backend deployment from 0 to N (where N > 0) or vice-versa.
+  // A GKE configuration is quite a bit more complicated than jar or docker-compose configurations and other definitions of
+  // `start` and `stop` are certainly possible, but this is what it will be for now.
   override def createProcess: CromwellProcess = {
     case class GkeCromwellProcess(override val cromwellConfiguration: GkeCromwellConfiguration) extends CromwellProcess {
-      private val startCommand = Array(
-        "/bin/bash",
-        "-c",
-        s"CROMWELL_TAG=$dockerTag CROMWELL_CONFIG=$conf docker-compose -f $dockerComposeFile up -d")
 
       override def displayString: String = startCommand.mkString(" ")
 
@@ -26,13 +31,8 @@ case class GkeCromwellConfiguration(dockerTag: String, dockerComposeFile: String
       }
 
       override def stop(): Unit = {
-        val command = Array(
-          "/bin/bash",
-          "-c",
-          s"docker-compose -f $dockerComposeFile down"
-        )
         val processBuilder = new java.lang.ProcessBuilder()
-          .command(command: _*)
+          .command(stopCommand: _*)
           .redirectOutput(Redirect.appendTo(File(logFile).toJava))
           .redirectErrorStream(true)
         processBuilder.start().waitFor()
@@ -51,11 +51,14 @@ case class GkeCromwellConfiguration(dockerTag: String, dockerComposeFile: String
 
 object GkeCromwellConfiguration {
   def apply(conf: Config): CromwellConfiguration = {
-    val dockerTag = conf.getString("docker-tag")
-    val dockerComposeFile = conf.getString("docker-compose-file")
-    val confPath = conf.getString("conf")
+    val startCommand = conf.getString("start-command")
+    val stopCommand = conf.getString("stop-command")
     val logPath = conf.getString("log")
 
-    new GkeCromwellConfiguration(dockerTag, dockerComposeFile, confPath, logPath)
+    new GkeCromwellConfiguration(
+      startCommand = Array("/bin/bash", "-c", startCommand),
+      stopCommand = Array("/bin/bash", "-c", stopCommand),
+      logFile = logPath
+    )
   }
 }
