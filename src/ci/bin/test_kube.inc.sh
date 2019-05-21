@@ -194,3 +194,7 @@ cromwell::kube::create_deployment_files() {
     eval ${command}
   done
 }
+
+cromwell::kube::get_load_balancer_ip() {
+  kubectl get services | grep cromwell-frontend | awk '{print $4}'
+}

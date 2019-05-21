@@ -26,7 +26,7 @@ cromwell::kube::create_deployment_files
 cromwell::kube::create_secrets
 cromwell::kube::start_cromwell
 
-# Setting these variables should cause the associated config values to be rendered into centaur_application_horicromtal.conf
+# Setting these variables should cause the associated config values to be rendered into centaur_application_horicromtal_docker_compose.conf
 # There should probably be more indirections in CI scripts but that can wait.
 export TEST_CROMWELL_CONF=horicromtal_application.conf
 export CROMWELL_BUILD_MYSQL_USERNAME=travis
