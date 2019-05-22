@@ -40,7 +40,7 @@ cromwell::kube::centaur_gke_name() {
 cromwell::kube::gcloud_run_as_service_account() {
   local command="$1"
   docker run -v "$CROMWELL_BUILD_RESOURCES_DIRECTORY:$DOCKER_ETC_PATH" -e DOCKER_ETC_PATH --rm google/cloud-sdk:latest /bin/bash -c "\
-    gcloud auth activate-service-account --key-file $DOCKER_ETC_PATH/${GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON} && $command "
+    gcloud auth activate-service-account --key-file $DOCKER_ETC_PATH/${GOOGLE_CENTAUR_SERVICE_ACCOUNT_JSON} 2> /dev/null && $command "
 }
 
 # Configure kubectl for gke then run the specified command
@@ -60,9 +60,13 @@ cromwell::kube::create_cloud_sql_instance() {
   local cloudSqlInstanceName="$1"
   local cloudSqlPassword="$(cat ${CROMWELL_BUILD_RESOURCES_DIRECTORY}/cromwell-centaur-gke-cloudsql.json | jq -r '.db_pass')"
 
-  # Create the Cloud SQL instance.
+  # Kick off async creation of the Cloud SQL instance (synchronous creation fails sometimes when the cloud is angry).
+  local operationName=$(cromwell::kube::gcloud_run_as_service_account \
+    "gcloud --project $GOOGLE_PROJECT sql instances create --async --zone $GOOGLE_ZONE --storage-size=10GB --database-version=MYSQL_5_7 $cloudSqlInstanceName --format='value(name)'")
+
+  # wait for it
   cromwell::kube::gcloud_run_as_service_account \
-    "gcloud --project $GOOGLE_PROJECT sql instances create --zone $GOOGLE_ZONE --storage-size=10GB --database-version=MYSQL_5_7 $cloudSqlInstanceName"
+    "gcloud beta sql operations wait --timeout=900 --project $GOOGLE_PROJECT ${operationName}"
 
   # Create a user.
   cromwell::kube::gcloud_run_as_service_account \
@@ -85,6 +89,8 @@ cromwell::kube::destroy_cloud_sql_instance() {
 cromwell::kube::connection_name_for_cloud_sql_instance() {
   # TOL It appears the connectionName can be inferred (<project>:<region>:<instance name>), so it may not be necessary to query.
   local instanceName="$1"
+  # TODO it would be nice to make this async like the Cloud SQL creation but the `gcloud container clusters create --async` doesn't
+  # TODO seem to return an operation ID. It might be possible to list operations and search for the known cluster name but yuck.
   echo -n $(cromwell::kube::gcloud_run_as_service_account \
     "gcloud --project $GOOGLE_PROJECT sql instances describe $instanceName --format='value(connectionName)'" | tr -d '\n')
 }
