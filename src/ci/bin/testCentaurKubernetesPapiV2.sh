@@ -7,11 +7,13 @@ export CROMWELL_BUILD_REQUIRES_SECURE=true
 # shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/test_kube.inc.sh" || source test_kube.inc.sh
 
-DUMMY_IMAGE="just-testing"
-KUBE_CROMWELL_IMAGE=$(cromwell::kube::generate_gcr_tag)
-CROMWELL_SBT_DOCKER_TAGS=${DUMMY_IMAGE} sbt server/docker
-cromwell::kube::gcr_login
-cromwell::kube::push_to_gcr ${DUMMY_IMAGE} ${KUBE_CROMWELL_IMAGE}
+# Comment image build out during change lock debugging
+#DUMMY_IMAGE="just-testing"
+#KUBE_CROMWELL_IMAGE=$(cromwell::kube::generate_gcr_tag)
+#CROMWELL_SBT_DOCKER_TAGS=${DUMMY_IMAGE} sbt server/docker
+#cromwell::kube::gcr_login
+#cromwell::kube::push_to_gcr ${DUMMY_IMAGE} ${KUBE_CROMWELL_IMAGE}
+KUBE_CROMWELL_IMAGE=broadinstitute/cromwell:41
 
 KUBE_CLUSTER_NAME=$(cromwell::kube::generate_gke_cluster_name)
 cromwell::kube::create_gke_cluster ${KUBE_CLUSTER_NAME}
