@@ -160,11 +160,14 @@ cromwell::kube::create_secrets() {
 }
 
 cromwell::kube::start_cromwell() {
-  for instance_type in frontend backend summarizer
+  for instance_type in summarizer frontend backend
   do
     KUBE_CROMWELL_INSTANCE_TYPE="${instance_type}"
     cromwell::kube::gcloud_run_kubectl_command_as_service_account \
       "${KUBE_CLUSTER_NAME}" "kubectl apply -f ${DOCKER_ETC_PATH}/${instance_type}-cromwell-deployment.yaml"
+    if [[ "$instance_type" == "summarizer" ]]; then
+      sleep 60
+    fi
   done
 }
 
