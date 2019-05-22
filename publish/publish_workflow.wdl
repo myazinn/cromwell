@@ -22,7 +22,7 @@ task doMajorRelease {
         organization: "Organization on which the release will be performed. Can be used for testing."
     }
 
-    Int nextV = releaseVersion + 1
+    Int nextVersion = releaseVersion + 1
     Boolean useEmailForName = githubName == "null"
 
     command <<<
@@ -30,11 +30,11 @@ task doMajorRelease {
         set -euo pipefail
 
         echo 'Setup Git'
-        # https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
-        echo "https://~{githubUser}:$(cat ~{githubTokenFile})@github.com" > githubCredentials
-        git config --global credential.helper "store --file $PWD/githubCredentials"
-        git config --global user.email ~{githubEmail}
-        ~{if (useEmailForName) then "" else "git config --global user.name '~{githubName}'"}
+        /cromwell-publish/git-setup.sh \
+            --tokenFile '~{githubTokenFile}' \
+            --user '~{githubUser}' \
+            --email '~{githubEmail}' \
+            ~{if (useEmailForName) then "" else "--user '~{githubName}'"} \
 
         echo 'Clone repo and checkout develop'
         git clone https://github.com/~{organization}/cromwell.git --branch develop cromwell
@@ -50,15 +50,15 @@ task doMajorRelease {
         echo 'Assemble jar for cromwell'
         sbt -Dproject.version=~{releaseVersion} -Dproject.isSnapshot=false server/assembly womtool/assembly
 
-        echo 'Create and push the hotfix branch'
+        echo 'Create the hotfix branch'
         git checkout -b ~{releaseVersion}_hotfix
 
         echo 'Update develop to point to next release version'
         git checkout develop
-        sed -i -e '/cromwellVersion[[:space:]]=/s/[0-9][0-9]*/~{nextV}/' project/Version.scala
+        sed -i -e '/cromwellVersion[[:space:]]=/s/[0-9][0-9]*/~{nextVersion}/' project/Version.scala
         git add project/Version.scala
         git diff-index --quiet HEAD \
-        || git commit --message "Update cromwell version from ~{releaseVersion} to ~{nextV}"
+        || git commit --message "Update cromwell version from ~{releaseVersion} to ~{nextVersion}"
 
         echo 'Push branches and tags'
         git push origin master develop ~{releaseVersion} ~{releaseVersion}_hotfix
@@ -76,8 +76,11 @@ task doMajorRelease {
     }
 }
 
-# doMinorRelease simply builds jars from the hotfix branch, tags the branch and push the tag to github
 task doMinorRelease {
+    meta {
+        description: "simply builds jars from the hotfix branch, tags the branch, and push the tag to github"
+    }
+
     input {
         File githubTokenFile
         String githubUser
@@ -98,20 +101,20 @@ task doMinorRelease {
         set -euo pipefail
 
         echo 'Setup Git'
-        # https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
-        echo "https://~{githubUser}:$(cat ~{githubTokenFile})@github.com" > githubCredentials
-        git config --global credential.helper "store --file $PWD/githubCredentials"
-        git config --global user.email ~{githubEmail}
-        ~{if (useEmailForName) then "" else "git config --global user.name '~{githubName}'"}
+        /cromwell-publish/git-setup.sh \
+            --tokenFile '~{githubTokenFile}' \
+            --user '~{githubUser}' \
+            --email '~{githubEmail}' \
+            ~{if (useEmailForName) then "" else "--user '~{githubName}'"} \
 
         echo 'Clone repo and checkout hotfix branch'
-        git clone https://github.com/~{organization}/cromwell.git --branch develop cromwell
+        git clone https://github.com/~{organization}/cromwell.git --branch ~{hotfixBranchName} cromwell
         cd cromwell
 
         echo 'Tag the release'
         git tag --message=~{releaseVersion} ~{releaseVersion}
 
-        echo 'Assemble jar for cromwell'
+        echo 'Assemble jars for cromwell and womtool'
         sbt -Dproject.version=~{releaseVersion} -Dproject.isSnapshot=false server/assembly womtool/assembly
 
         echo 'Push the tags'
@@ -387,7 +390,7 @@ task releaseHomebrew {
         String womtoolReleaseUrl
         File cromwellJar
         File womtoolJar
-        String homebrewDocker
+        String publishDocker
     }
 
     String branchName = "cromwell-~{releaseVersion}"
@@ -409,20 +412,12 @@ task releaseHomebrew {
         # Do not use `set -x` or it will print the GitHub token!
         set -euo pipefail
 
-        echo 'Install jq 1.6 to ensure --rawfile is supported'
-        curl \
-            --fail --silent \
-            --location \
-            --output /usr/bin/jq \
-            https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-        chmod +x /usr/bin/jq
-
         echo 'Setup Git'
-        # https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage
-        echo "https://~{githubUser}:$(cat ~{githubTokenFile})@github.com" > githubCredentials
-        git config --global credential.helper "store --file $PWD/githubCredentials"
-        git config --global user.email ~{githubEmail}
-        ~{if (useEmailForName) then "" else "git config --global user.name '~{githubName}'"}
+        /cromwell-publish/git-setup.sh \
+            --tokenFile '~{githubTokenFile}' \
+            --user '~{githubUser}' \
+            --email '~{githubEmail}' \
+            ~{if (useEmailForName) then "" else "--user '~{githubName}'"} \
 
         echo 'Clone the homebrew fork'
         git clone https://github.com/~{organization}/homebrew-core.git --depth=100
@@ -554,7 +549,7 @@ task releaseHomebrew {
     }
 
     runtime {
-        docker: homebrewDocker
+        docker: publishDocker
     }
 }
 
@@ -565,7 +560,6 @@ workflow publish_workflow {
         Boolean majorRelease = true
         Boolean publishHomebrew = true
         String publishDocker = "broadinstitute/cromwell-publish:latest"
-        String homebrewDocker = "linuxbrew/brew:latest"
     }
 
     parameter_meta {
@@ -651,7 +645,7 @@ workflow publish_workflow {
             womtoolReleaseUrl = publishGithubRelease.womtoolReleaseUrl,
             cromwellJar = cromwellJar,
             womtoolJar = womtoolJar,
-            homebrewDocker = homebrewDocker,
+            publishDocker = publishDocker,
         }
     }
 
@@ -661,7 +655,7 @@ workflow publish_workflow {
     }
 
     meta {
-        title: "Cromwell Release WDL"
+        title: "Cromwell Publish WDL"
         doc: "https://docs.google.com/document/d/1khCqpOYpkCE95pE4a6VfBIxd2zHPWuMILgpisNKCF6c"
     }
 }
