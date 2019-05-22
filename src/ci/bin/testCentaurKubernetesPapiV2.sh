@@ -15,8 +15,6 @@ source "${BASH_SOURCE%/*}/test_kube.inc.sh" || source test_kube.inc.sh
 #cromwell::kube::push_to_gcr ${DUMMY_IMAGE} ${KUBE_CROMWELL_IMAGE}
 KUBE_CROMWELL_IMAGE=broadinstitute/cromwell:41
 
-KUBE_CLUSTER_NAME=$(cromwell::kube::generate_gke_cluster_name)
-cromwell::kube::create_gke_cluster ${KUBE_CLUSTER_NAME}
 
 KUBE_CLOUDSQL_INSTANCE_NAME="$(cromwell::kube::generate_cloud_sql_instance_name)"
 cromwell::kube::create_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME}
@@ -24,6 +22,9 @@ cromwell::kube::create_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME}
 KUBE_CLOUDSQL_CONNECTION_NAME="$(cromwell::kube::connection_name_for_cloud_sql_instance ${KUBE_CLOUDSQL_INSTANCE_NAME})"
 echo "Cloud SQL connection name is $KUBE_CLOUDSQL_CONNECTION_NAME"
 
+
+KUBE_CLUSTER_NAME=$(cromwell::kube::generate_gke_cluster_name)
+cromwell::kube::create_gke_cluster ${KUBE_CLUSTER_NAME}
 cromwell::kube::create_deployment_files
 cromwell::kube::create_secrets
 cromwell::kube::start_cromwell
