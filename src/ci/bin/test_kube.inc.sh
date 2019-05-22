@@ -160,7 +160,8 @@ cromwell::kube::create_secrets() {
 }
 
 cromwell::kube::start_cromwell() {
-  for instance_type in frontend backend summarizer
+  # try just the summarizer for debugging Liquibase changelog crashiness
+  for instance_type in summarizer # frontend backend summarizer
   do
     KUBE_CROMWELL_INSTANCE_TYPE="${instance_type}"
     cromwell::kube::gcloud_run_kubectl_command_as_service_account \
