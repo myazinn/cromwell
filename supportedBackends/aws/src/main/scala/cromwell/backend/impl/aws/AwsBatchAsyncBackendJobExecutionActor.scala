@@ -63,8 +63,8 @@ import wom.expression.NoIoFunctionSet
 import wom.types.{WomArrayType, WomSingleFileType}
 import wom.values._
 
-import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
+import scala.concurrent.{Future, Promise}
 import scala.language.postfixOps
 import scala.util.control.NoStackTrace
 import scala.util.{Success, Try}
@@ -451,11 +451,35 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
     }
   }
 
+  override def logF() = Log.info(
+    s"""workingDisk.mountPoint is ${workingDisk.mountPoint} and exists? ${workingDisk.mountPoint.exists}
+       |workingDisk.mountPoint/file is ${workingDisk.mountPoint / "example.sh"} and exists? ${(workingDisk.mountPoint / "example.sh").exists}
+     """.stripMargin)
+
+  override val defaultGen: Boolean = false
+
+  override val stringGen: String = (workingDisk.mountPoint / "example.sh").pathWithoutScheme
+
   override def mapCommandLineWomFile(womFile: WomFile): WomFile = {
     womFile.mapFile(value =>
       getPath(value) match {
-        case Success(path: S3Path) => workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
-        case _ => value
+        case Success(path: S3Path) =>
+          val result = workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
+
+          // mapCommandLineWomFile Success case value /cromwell_root/cromwell-results-full-2/cromwell-execution/cwl_temp_file_7899c98b-bc28-4303-bee0-009adce3e088.cwl/7899c98b-bc28-4303-bee0-009adce3e088/call-test
+          // mapCommandLineWomFile Success case value /cromwell_root/cromwell-results-full-2/cromwell-execution/cwl_temp_file_7899c98b-bc28-4303-bee0-009adce3e088.cwl/7899c98b-bc28-4303-bee0-009adce3e088/call-test/tmp.82b6d58a
+          Log.info(s"mapCommandLineWomFile Success case value $result")
+
+
+          //result exists? None
+          Log.info(s"result exists? ${getPath(result).toOption.map(_.exists)}")
+
+          //workingDisk.mountPoint is /cromwell_root
+
+          result
+        case _ =>
+          Log.info(s"mapCommandLineWomFile anycase value $value")
+          value
       }
     )
   }

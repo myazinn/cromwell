@@ -64,7 +64,15 @@ trait StandardCachingActorHelper extends JobCachingActorHelper {
     *
     * @return Paths to the job.
     */
-  lazy val jobPaths: JobPaths = standardInitializationData.workflowPaths.toJobPaths(jobDescriptor)
+  lazy val jobPaths: JobPaths = {
+
+    val result = standardInitializationData.workflowPaths.toJobPaths(jobDescriptor)
+
+    // jobPaths AwsBatchJobPaths(AwsBatchWorkflowPaths([BackendWorkflowDescriptor id=ef8dfe06 workflowName=cwl_temp_file_ef8dfe06-d375-40fc-93b8-9a6d3183aed0.cwl],AwsCredentials(accessKeyId=AKIAYVNYTS6GDZIRRESP),cromwell.backend.impl.aws.AwsBatchConfiguration@103e1b08),BackendJobDescriptorKey_CommandCallNode_test:-1:1)
+    log.info(s"jobPaths $result")
+
+    result
+  }
 
   /**
     * Returns the metadata key values to store before executing a job.

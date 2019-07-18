@@ -10,6 +10,7 @@ import common.validation.IOChecked._
 import cwl.ExpressionEvaluator.{ECMAScriptExpression, ECMAScriptFunction}
 import cwl.InitialWorkDirFileGeneratorExpression._
 import cwl.InitialWorkDirRequirement.IwdrListingArrayEntry
+import org.slf4j.LoggerFactory
 import shapeless.Poly1
 import wom.callable.{AdHocValue, ContainerizedInputExpression}
 import wom.expression.IoFunctionSet.{IoDirectory, IoFile}
@@ -66,17 +67,35 @@ final case class InitialWorkDirFileGeneratorExpression(entry: IwdrListingArrayEn
         }
       } yield WomMaybeListedDirectory(Option(directory), Option(fileListing))
     }
-    
-    inputValues.toList.traverse[IOChecked, (String, WomValue)]({
+
+    val Log = LoggerFactory.getLogger(InitialWorkDirFileGeneratorExpression.getClass)
+    Log.info("inside InitialWorkDirFileGeneratorExpression")
+
+    //inputValues: Map()
+    Log.info(s"inputValues: $inputValues")
+
+    val res1: IOChecked[List[(String, WomValue)]] = inputValues.toList.traverse[IOChecked, (String, WomValue)]({
       case (k, v: WomMaybeListedDirectory) =>
+        Log.info(s"inside case (k, v: WomMaybeListedDirectory) k is $k ; v is $v")
         val absolutePathString = ioFunctionSet.pathFunctions.relativeToHostCallRoot(v.value)
         recursivelyBuildDirectory(absolutePathString).contextualizeErrors(s"Error building directory $absolutePathString") map { k -> _ }
-      case kv => kv.validIOChecked
-    }).map(_.toMap)
+      case kv =>
+        Log.info("inside case kv")
+        kv.validIOChecked
+    })
+
+    //res1: EitherT(<function1>)
+    Log.info(s"res1: $res1")
+
+      val res2 = res1.map(_.toMap)
       .flatMap({ updatedValues =>
         val unmappedParameterContext = ParameterContext(ioFunctionSet, expressionLib, updatedValues)
         entry.fold(InitialWorkDirFilePoly).apply(unmappedParameterContext, mappedInputValues).toIOChecked
       })
+
+    //res2: EitherT(IO$2064120497)
+    Log.info(s"res2: $res2")
+    res2
   }
 }
 

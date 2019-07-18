@@ -171,7 +171,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
     protected void validateUri(URI uri) {
         Preconditions.checkNotNull(uri, "uri is null");
-        Preconditions.checkArgument(uri.getScheme().equals(getScheme()), "uri scheme must be 's3': '%s'", uri);
+//        Preconditions.checkArgument(uri.getScheme().equals(getScheme()), "uri scheme must be 's3': '%s'", uri);
     }
 
     protected void addEnvProperties(Properties props, Map<String, ?> env) {

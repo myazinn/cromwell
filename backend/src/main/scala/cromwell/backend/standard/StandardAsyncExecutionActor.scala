@@ -74,7 +74,7 @@ case class DefaultStandardAsyncExecutionActorParams
   * NOTE: Unlike the parent trait `AsyncBackendJobExecutionActor`, this trait is subject to even more frequent updates
   * as the common behavior among the backends adjusts in unison.
   */
-trait StandardAsyncExecutionActor
+trait tStandardAsyncExecutionActor
   extends AsyncBackendJobExecutionActor with StandardCachingActorHelper with AsyncIoActorClient with KvClient with SlowJobWarning {
   this: Actor with ActorLogging with BackendJobLifecycleActor =>
 
@@ -121,8 +121,15 @@ trait StandardAsyncExecutionActor
   lazy val jobIdKey: String = standardParams.jobIdKey
 
   /** @see [[Command.instantiate]] */
-  lazy val backendEngineFunctions: StandardExpressionFunctions =
-    standardInitializationData.expressionFunctions(jobPaths, standardParams.ioActor, ec)
+  lazy val backendEngineFunctions: StandardExpressionFunctions = {
+    val result = standardInitializationData.expressionFunctions(jobPaths, standardParams.ioActor, ec)
+
+    // backendEngineFunctions cromwell.backend.impl.aws.AwsBatchExpressionFunctions@6edfbb71
+    log.info(s"backendEngineFunctions $result")
+
+    result
+  }
+
 
   lazy val scriptEpilogue = configurationDescriptor.backendConfig.as[Option[String]]("script-epilogue").getOrElse("sync")
 
@@ -428,6 +435,12 @@ trait StandardAsyncExecutionActor
     val localize: (AdHocValue, Path) => Future[LocalizedAdHocValue] = { (adHocValue, file) =>
       val actualName = adHocValue.alternativeName.getOrElse(file.name)
       val finalPath = jobPaths.callExecutionRoot / actualName
+
+      log.info("localizeAdHocValues IN")
+      log.info(s"outputPath exists? (${runtimeEnvironment.outputPath}) ${getPath(runtimeEnvironment.outputPath).toOption.map(_.exists)}")
+      log.info(s"finalPath exists? ($finalPath) ${finalPath.exists}")
+      log.info("localizeAdHocValues OUT")
+
       // First check that it's not already there under execution root
       asyncIo.existsAsync(finalPath) flatMap {
         // If it's not then copy it
@@ -457,7 +470,13 @@ trait StandardAsyncExecutionActor
   }
 
   lazy val evaluatedAdHocFiles: ErrorOr[List[AdHocValue]] = {
+
+    log.info("evaluatedAdHocFiles")
+
+
     val callable = jobDescriptor.taskCall.callable
+    // callable [Task name=cwl-test.cwl commandTemplate=List(StringCommandPart(sh), StringCommandPart(example.sh))]
+    log.info(s"callable $callable")
 
     /*
       * Try to map the command line values.
@@ -475,26 +494,72 @@ trait StandardAsyncExecutionActor
       case (inputDefinition, womValue) => inputDefinition.localName.value -> womValue
     })
 
+    // unmappedInputs Map()
+    log.info(s"unmappedInputs $unmappedInputs")
+
     val mappedInputs: Checked[Map[String, WomValue]] = localizedInputs.toErrorOr.map(
       _.map({
         case (inputDefinition, value) => inputDefinition.localName.value -> tryCommandLineValueMapper(value)
       })
     ).toEither
 
-    val evaluateAndInitialize = (containerizedInputExpression: ContainerizedInputExpression) => for {
-      mapped <- mappedInputs
-      evaluated <- containerizedInputExpression.evaluate(unmappedInputs, mapped, backendEngineFunctions).toChecked
-      initialized <- evaluated.traverse[IOChecked, AdHocValue]({ adHocValue =>
-        adHocValue.womValue.initialize(backendEngineFunctions).map({
-          case file: WomFile => adHocValue.copy(womValue = file)
-          case _ => adHocValue
-        })
-      }).toChecked
-    } yield initialized
+    // mappedInputs Right(Map())
+    log.info(s"mappedInputs $mappedInputs")
+
+    val evaluateAndInitialize = (containerizedInputExpression: ContainerizedInputExpression) => {
+
+      // containerizedInputExpression InitialWorkDirFileGeneratorExpression(Inr(Inr(Inr(Inl(StringDirent(PREFIX='Message is:'
+      // MSG="\${PREFIX} Hello world!"
+      // echo \${MSG},Inr(Inl(example.sh)),None))))),Vector())
+      log.info(s"containerizedInputExpression $containerizedInputExpression")
+
+      for {
+        mapped <- mappedInputs
+        y = {log.info("before evaluated")
+//          log.info("gonna wait")
+//          Thread.sleep(20000)
+//          log.info("awaited")
+        }
+        toIter = if (defaultGen)
+          containerizedInputExpression.evaluate(unmappedInputs, mapped, backendEngineFunctions).toChecked
+        else
+          Success(List(AdHocValue(WomSingleFile(stringGen), None, None))).toChecked
+        evaluated <- toIter
+
+        // evaluated List(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_80693730-9fb3-478d-9024-bfaf66d26095.cwl/80693730-9fb3-478d-9024-bfaf66d26095/call-test/example.sh),None,None))
+        x = {
+          log.info(s"evaluated $evaluated")
+          //        log.info("gonna wait")
+          //        Thread.sleep(20000)
+          //        log.info("awaited")
+        }
+        initialized <- evaluated.traverse[IOChecked, AdHocValue]({ adHocValue =>
+          adHocValue.womValue.initialize(backendEngineFunctions).map({
+            case file: WomFile =>
+
+              // case file WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_7899c98b-bc28-4303-bee0-009adce3e088.cwl/7899c98b-bc28-4303-bee0-009adce3e088/call-test/example.sh); adHocValue AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_7899c98b-bc28-4303-bee0-009adce3e088.cwl/7899c98b-bc28-4303-bee0-009adce3e088/call-test/example.sh),None,None)
+              log.info(s"case file $file; adHocValue $adHocValue")
+
+              adHocValue.copy(womValue = file)
+            case _ =>
+
+              log.info(s"case _ $adHocValue")
+
+              adHocValue
+          })
+        }).toChecked
+      } yield {
+        logF
+        initialized}
+    }
 
     callable.adHocFileCreation.toList
       .flatTraverse[ErrorOr, AdHocValue](evaluateAndInitialize.andThen(_.toValidated))
   }
+
+  def logF(): Unit = log.info("default logF")
+  val defaultGen = true
+  val stringGen: String = "/cromwell_root/Example.sh"
 
   lazy val localizedAdHocValues: ErrorOr[List[StandardAdHocValue]] = evaluatedAdHocFiles.toEither
     .flatMap(localizeAdHocValues.andThen(_.toEither))
