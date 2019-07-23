@@ -8,8 +8,9 @@ abstract class KnownJobFailureException extends Exception {
   def stderrPath: Option[Path]
 }
 
-final case class WrongReturnCode(jobTag: String, returnCode: Int, stderrPath: Option[Path]) extends KnownJobFailureException {
-  override def getMessage = s"Job $jobTag exited with return code $returnCode which has not been declared as a valid return code. See 'continueOnReturnCode' runtime attribute for more details."
+final case class WrongReturnCode(jobTag: String, returnCode: Int, stderrPath: Option[Path], errorMessage: String = "") extends KnownJobFailureException {
+  override def getMessage =
+    s"""Job $jobTag exited with return code $returnCode which has not been declared as a valid return code. Possibly caused by: "$errorMessage" . See 'continueOnReturnCode' runtime attribute for more details."""
 }
 
 final case class ReturnCodeIsNotAnInt(jobTag: String, returnCode: String, stderrPath: Option[Path]) extends KnownJobFailureException {
