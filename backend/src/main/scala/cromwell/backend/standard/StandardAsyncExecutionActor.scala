@@ -161,6 +161,8 @@ trait StandardAsyncExecutionActor
 
   /** @see [[Command.instantiate]] */
   final lazy val commandLineValueMapper: WomValue => WomValue = {
+    // INSIDE commandLineValueMapper; inputsToNotLocalize is Set()
+    log.info(s"INSIDE commandLineValueMapper; inputsToNotLocalize is $inputsToNotLocalize")
     womValue => WomFileMapper.mapWomFiles(mapCommandLineWomFile, inputsToNotLocalize)(womValue).get
   }
 
@@ -424,15 +426,28 @@ trait StandardAsyncExecutionActor
   lazy val localizeAdHocValues: List[AdHocValue] => ErrorOr[List[StandardAdHocValue]] = { adHocValues =>
     import cats.instances.future._
 
+    log.info("INSIDE localizeAdHocValues")
+
     // Localize an adhoc file to the callExecutionRoot as needed
     val localize: (AdHocValue, Path) => Future[LocalizedAdHocValue] = { (adHocValue, file) =>
       val actualName = adHocValue.alternativeName.getOrElse(file.name)
+
+      // actualName is example.sh
+      log.info(s"actualName is $actualName")
       val finalPath = jobPaths.callExecutionRoot / actualName
+
+      // finalPath is s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_953b820b-1cf5-459e-b819-2a40b3d40722.cwl/953b820b-1cf5-459e-b819-2a40b3d40722/call-test/example.sh
+      log.info(s"finalPath is $finalPath")
       // First check that it's not already there under execution root
       asyncIo.existsAsync(finalPath) flatMap {
         // If it's not then copy it
-        case false => asyncIo.copyAsync(file, finalPath) as { LocalizedAdHocValue(adHocValue, finalPath) }
-        case true => Future.successful(LocalizedAdHocValue(adHocValue, finalPath))
+        case false =>
+          log.info("false case")
+          asyncIo.copyAsync(file, finalPath) as { LocalizedAdHocValue(adHocValue, finalPath) }
+        case true =>
+          // true case
+          log.info("true case")
+          Future.successful(LocalizedAdHocValue(adHocValue, finalPath))
       }
     }
 
@@ -457,6 +472,7 @@ trait StandardAsyncExecutionActor
   }
 
   lazy val evaluatedAdHocFiles: ErrorOr[List[AdHocValue]] = {
+    log.info("INSIDE evaluatedAdHocFiles")
     val callable = jobDescriptor.taskCall.callable
 
     /*
@@ -475,15 +491,28 @@ trait StandardAsyncExecutionActor
       case (inputDefinition, womValue) => inputDefinition.localName.value -> womValue
     })
 
+    // unmappedInputs is Map()
+    log.info(s"unmappedInputs is $unmappedInputs")
+
     val mappedInputs: Checked[Map[String, WomValue]] = localizedInputs.toErrorOr.map(
       _.map({
         case (inputDefinition, value) => inputDefinition.localName.value -> tryCommandLineValueMapper(value)
       })
     ).toEither
+    // mappedInputs is Right(Map())
+    log.info(s"mappedInputs is $mappedInputs")
 
     val evaluateAndInitialize = (containerizedInputExpression: ContainerizedInputExpression) => for {
       mapped <- mappedInputs
       evaluated <- containerizedInputExpression.evaluate(unmappedInputs, mapped, backendEngineFunctions).toChecked
+      trickToLog = {
+        // containerizedInputExpression is InitialWorkDirFileGeneratorExpression(Inr(Inr(Inr(Inl(StringDirent(PREFIX='Message is:'
+        //MSG="\${PREFIX} Hello world!"
+        //echo \${MSG},Inr(Inl(example.sh)),None))))),Vector())
+        log.info(s"containerizedInputExpression is $containerizedInputExpression")
+
+        // evaluated is List(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/example.sh),None,None))
+        log.info(s"evaluated is $evaluated")}
       initialized <- evaluated.traverse[IOChecked, AdHocValue]({ adHocValue =>
         adHocValue.womValue.initialize(backendEngineFunctions).map({
           case file: WomFile => adHocValue.copy(womValue = file)
@@ -492,8 +521,12 @@ trait StandardAsyncExecutionActor
       }).toChecked
     } yield initialized
 
-    callable.adHocFileCreation.toList
+    val result = callable.adHocFileCreation.toList
       .flatTraverse[ErrorOr, AdHocValue](evaluateAndInitialize.andThen(_.toValidated))
+
+    // evaluatedAdHocFiles; the result is Valid(List(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/example.sh),None,None)))
+    log.info(s"evaluatedAdHocFiles; the result is $result")
+    result
   }
 
   lazy val localizedAdHocValues: ErrorOr[List[StandardAdHocValue]] = evaluatedAdHocFiles.toEither

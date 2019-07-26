@@ -452,11 +452,21 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
   }
 
   override def mapCommandLineWomFile(womFile: WomFile): WomFile = {
-    womFile.mapFile(value =>
+    womFile.mapFile(value => {
+      // INSIDE mapCommandLineWomFile; value is s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test
+      // SUCCESS
+      // INSIDE mapCommandLineWomFile; value is s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/tmp.f9792e29
+      // SUCCESS
+      Log.info(s"INSIDE mapCommandLineWomFile; value is $value")
       getPath(value) match {
-        case Success(path: S3Path) => workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
-        case _ => value
+        case Success(path: S3Path) =>
+          Log.info("SUCCESS")
+          workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
+        case _ =>
+          Log.info("FAILURE")
+          value
       }
+    }
     )
   }
 }
