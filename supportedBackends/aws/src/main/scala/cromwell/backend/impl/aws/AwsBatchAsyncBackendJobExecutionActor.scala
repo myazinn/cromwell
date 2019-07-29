@@ -179,6 +179,16 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
                                     remotePathArray: Seq[WomFile],
                                     localPathArray: Seq[WomFile],
                                     jobDescriptor: BackendJobDescriptor): Iterable[AwsBatchInput] = {
+    log.info("INSIDE inputsFromWomFiles")
+
+    // namePrefix is 6a2dbca3
+    log.info(s"namePrefix is $namePrefix")
+    // remotePathArray is List(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_f4434335-4a7c-4847-b556-9dd92edbadcb.cwl/f4434335-4a7c-4847-b556-9dd92edbadcb/call-test/example.sh))
+    log.info(s"remotePathArray is $remotePathArray")
+    // localPathArray is List(WomSingleFile(cromwell-results-full-2/cromwell-execution/cwl_temp_file_f4434335-4a7c-4847-b556-9dd92edbadcb.cwl/f4434335-4a7c-4847-b556-9dd92edbadcb/call-test/example.sh))
+    log.info(s"localPathArray is $localPathArray")
+    //jobDescriptor is f4434335-4a7c-4847-b556-9dd92edbadcb:BackendJobDescriptorKey_CommandCallNode_test:-1:1
+    log.info(s"jobDescriptor is $jobDescriptor")
     (remotePathArray zip localPathArray zipWithIndex) flatMap {
       case ((remotePath, localPath), index) =>
         Seq(AwsBatchFileInput(s"$namePrefix-$index", remotePath.valueString, DefaultPathBuilder.get(localPath.valueString), workingDisk))
@@ -206,7 +216,13 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
     def localizationPath(f: CommandSetupSideEffectFile) =
       f.relativeLocalPath.fold(ifEmpty = relativeLocalizationPath(f.file))(WomFile(f.file.womFileType, _))
     val writeFunctionInputs = writeFunctionFiles flatMap {
-      case (name, files) => inputsFromWomFiles(name, files.map(_.file), files.map(localizationPath), jobDescriptor)
+      case (name, files) =>
+        log.info("writeFunctionInputs called")
+        // name is 6a2dbca3
+        log.info(s"name is $name")
+        // files is List(CommandSetupSideEffectFile(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_f4434335-4a7c-4847-b556-9dd92edbadcb.cwl/f4434335-4a7c-4847-b556-9dd92edbadcb/call-test/example.sh),None))
+        log.info(s"files is $files")
+        inputsFromWomFiles(name, files.map(_.file), files.map(localizationPath), jobDescriptor)
     }
 
     // Collect all WomFiles from inputs to the call.
@@ -229,12 +245,16 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
       case (name, files) => inputsFromWomFiles(name, files, files.map(relativeLocalizationPath), jobDescriptor)
     }
 
-    val scriptInput: AwsBatchInput = AwsBatchFileInput(
-      "script",
-      jobPaths.script.pathAsString,
-      DefaultPathBuilder.get(jobPaths.script.pathWithoutScheme),
-      workingDisk
-    )
+    val scriptInput: AwsBatchInput = {
+      // INSIDE scriptInput; jobPaths.script.pathWithoutScheme is cromwell-results-full-2/cromwell-execution/cwl_temp_file_f4434335-4a7c-4847-b556-9dd92edbadcb.cwl/f4434335-4a7c-4847-b556-9dd92edbadcb/call-test/script
+      log.info(s"INSIDE scriptInput; jobPaths.script.pathWithoutScheme is ${jobPaths.script.pathWithoutScheme} ")
+      AwsBatchFileInput(
+        "script",
+        jobPaths.script.pathAsString,
+        DefaultPathBuilder.get(jobPaths.script.pathWithoutScheme),
+        workingDisk
+      )
+    }
 
     Set(scriptInput) ++ writeFunctionInputs ++ callInputInputs
   }
@@ -454,16 +474,19 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
   override def mapCommandLineWomFile(womFile: WomFile): WomFile = {
     womFile.mapFile(value => {
       // INSIDE mapCommandLineWomFile; value is s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test
-      // SUCCESS
       // INSIDE mapCommandLineWomFile; value is s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/tmp.f9792e29
-      // SUCCESS
-      Log.info(s"INSIDE mapCommandLineWomFile; value is $value")
+      Log.info(s"INSIDE AWS mapCommandLineWomFile; value is $value")
       getPath(value) match {
         case Success(path: S3Path) =>
-          Log.info("SUCCESS")
-          workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
+          Log.info("case Success(path: S3Path)")
+          val result = workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
+          // result is /cromwell_root/cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test// result is /cromwell_root/cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test
+          // result is /cromwell_root/cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test// result is /cromwell_root/cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/tmp.f9792e29
+          Log.info(s"result is $result")
+          result
         case _ =>
-          Log.info("FAILURE")
+          Log.info("case _")
+          Log.info(s"result is $value")
           value
       }
     }

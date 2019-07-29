@@ -436,7 +436,7 @@ trait StandardAsyncExecutionActor
       log.info(s"actualName is $actualName")
       val finalPath = jobPaths.callExecutionRoot / actualName
 
-      // finalPath is s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_953b820b-1cf5-459e-b819-2a40b3d40722.cwl/953b820b-1cf5-459e-b819-2a40b3d40722/call-test/example.sh
+      // AWS: finalPath is s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_953b820b-1cf5-459e-b819-2a40b3d40722.cwl/953b820b-1cf5-459e-b819-2a40b3d40722/call-test/example.sh
       log.info(s"finalPath is $finalPath")
       // First check that it's not already there under execution root
       asyncIo.existsAsync(finalPath) flatMap {
@@ -511,7 +511,8 @@ trait StandardAsyncExecutionActor
         //echo \${MSG},Inr(Inl(example.sh)),None))))),Vector())
         log.info(s"containerizedInputExpression is $containerizedInputExpression")
 
-        // evaluated is List(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/example.sh),None,None))
+        // AWS: evaluated is List(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/example.sh),None,None))
+        // GCP: evaluated is List(AdHocValue(WomSingleFile(gs://my-cromwell-bucket/cromwell-execution/cwl_temp_file_2c9d17d4-ba84-4b46-86b9-fc2b4bde77ab.cwl/2c9d17d4-ba84-4b46-86b9-fc2b4bde77ab/call-test/example.sh),None,None))
         log.info(s"evaluated is $evaluated")}
       initialized <- evaluated.traverse[IOChecked, AdHocValue]({ adHocValue =>
         adHocValue.womValue.initialize(backendEngineFunctions).map({
@@ -524,14 +525,22 @@ trait StandardAsyncExecutionActor
     val result = callable.adHocFileCreation.toList
       .flatTraverse[ErrorOr, AdHocValue](evaluateAndInitialize.andThen(_.toValidated))
 
-    // evaluatedAdHocFiles; the result is Valid(List(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/example.sh),None,None)))
+    // AWS: evaluatedAdHocFiles; the result is Valid(List(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9.cwl/d41fb1be-a1b8-4f1d-b3fd-bb7e824bb7d9/call-test/example.sh),None,None)))
+    // GCP: evaluatedAdHocFiles; the result is Valid(List(AdHocValue(WomSingleFile(gs://my-cromwell-bucket/cromwell-execution/cwl_temp_file_2c9d17d4-ba84-4b46-86b9-fc2b4bde77ab.cwl/2c9d17d4-ba84-4b46-86b9-fc2b4bde77ab/call-test/example.sh),None,None)))
     log.info(s"evaluatedAdHocFiles; the result is $result")
     result
   }
 
-  lazy val localizedAdHocValues: ErrorOr[List[StandardAdHocValue]] = evaluatedAdHocFiles.toEither
-    .flatMap(localizeAdHocValues.andThen(_.toEither))
-    .toValidated
+  lazy val localizedAdHocValues: ErrorOr[List[StandardAdHocValue]] = {
+    log.info("INSIDE localizedAdHocValues")
+    val result = evaluatedAdHocFiles.toEither
+      .flatMap(localizeAdHocValues.andThen(_.toEither))
+      .toValidated
+
+    // AWS: localizedAdHocValues result is Valid(List(Inr(Inl(LocalizedAdHocValue(AdHocValue(WomSingleFile(s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_1c790c5e-36e8-407d-95d4-9ac0bac3acb4.cwl/1c790c5e-36e8-407d-95d4-9ac0bac3acb4/call-test/example.sh),None,None),s3://cromwell-results-full-2/cromwell-execution/cwl_temp_file_1c790c5e-36e8-407d-95d4-9ac0bac3acb4.cwl/1c790c5e-36e8-407d-95d4-9ac0bac3acb4/call-test/example.sh)))))
+    log.info(s"localizedAdHocValues result is $result")
+    result
+  }
 
   protected def asAdHocFile(womFile: WomFile) = evaluatedAdHocFiles map { _.find({
     case AdHocValue(file, _, _) => file.value == womFile.value
