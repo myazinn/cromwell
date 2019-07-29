@@ -155,6 +155,13 @@ class PipelinesApiAsyncBackendJobExecutionActor(override val standardParams: Sta
                                                remotePathArray: Seq[WomFile],
                                                localPathArray: Seq[WomFile],
                                                jobDescriptor: BackendJobDescriptor): Iterable[PipelinesApiInput] = {
+    log.info("INSIDE pipelinesApiInputsFromWomFiles")
+    // remotePathArray is List(WomSingleFile(gs://my-cromwell-bucket/cromwell-execution/cwl_temp_file_3d13ab78-af4e-406c-a849-3f27ee71d516.cwl/3d13ab78-af4e-406c-a849-3f27ee71d516/call-test/example.sh))
+    log.info(s"remotePathArray is $remotePathArray")
+    // localPathArray is List(WomSingleFile(example.sh))
+    log.info(s"localPathArray is $localPathArray")
+    // jobDescriptor is 3d13ab78-af4e-406c-a849-3f27ee71d516:BackendJobDescriptorKey_CommandCallNode_test:-1:1
+    log.info(s"jobDescriptor is $jobDescriptor")
     (remotePathArray zip localPathArray zipWithIndex) flatMap {
       case ((remotePath, localPath), index) =>
         Seq(PipelinesApiFileInput(s"$jesNamePrefix-$index", getPath(remotePath.valueString).get, DefaultPathBuilder.get(localPath.valueString), workingDisk))
@@ -710,33 +717,64 @@ class PipelinesApiAsyncBackendJobExecutionActor(override val standardParams: Sta
     }
   }
 
+  // Apparently, this method is never called in ad_hoc_file test
   override def mapCommandLineWomFile(womFile: WomFile): WomFile = {
+    log.info(s"workingDisk.mountPoint is ${workingDisk.mountPoint}")
     womFile.mapFile { value =>
+      log.info(s"INSIDE GCP mapCommandLineWomFile; value is $value")
       (getPath(value), asAdHocFile(womFile)) match {
         case (Success(gcsPath: GcsPath), Some(adHocFile)) =>
           // Ad hoc files will be placed directly at the root ("/cromwell_root/ad_hoc_file.txt") unlike other input files
           // for which the full path is being propagated ("/cromwell_root/path/to/input_file.txt")
-          workingDisk.mountPoint.resolve(adHocFile.alternativeName.getOrElse(gcsPath.name)).pathAsString
+          log.info("case (Success(gcsPath: GcsPath), Some(adHocFile))")
+          val result = workingDisk.mountPoint.resolve(adHocFile.alternativeName.getOrElse(gcsPath.name)).pathAsString
+          log.info(s"result is $result")
+          result
         case (Success(path @ ( _: GcsPath | _: HttpPath)), _) =>
-          workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
+          log.info("case (Success(path @ ( _: GcsPath | _: HttpPath)), _)")
+          val result = workingDisk.mountPoint.resolve(path.pathWithoutScheme).pathAsString
+          log.info(s"result is $result")
+          result
         case (Success(drsPath: DrsPath), _) =>
+          log.info("case (Success(drsPath: DrsPath), _)")
           val filePath = DrsResolver.getContainerRelativePath(drsPath).unsafeRunSync()
-          workingDisk.mountPoint.resolve(filePath).pathAsString
+          val result = workingDisk.mountPoint.resolve(filePath).pathAsString
+          log.info(s"result is $result")
+          result
         case (Success(sraPath: SraPath), _) =>
-          workingDisk.mountPoint.resolve(s"sra-${sraPath.accession}/${sraPath.pathWithoutScheme}").pathAsString
-        case _ => value
+          log.info("case (Success(sraPath: SraPath), _)")
+          val result = workingDisk.mountPoint.resolve(s"sra-${sraPath.accession}/${sraPath.pathWithoutScheme}").pathAsString
+          log.info(s"result is $result")
+          result
+        case _ =>
+          log.info("case _")
+          log.info(s"result is $value")
+          value
       }
     }
   }
 
+  // Apparently, this method is never called in ad_hoc_file test
   override def mapCommandLineJobInputWomFile(womFile: WomFile): WomFile = {
+    log.info("INSIDE GCP mapCommandLineJobInputWomFile")
+    log.info(s"womFile is $womFile")
     womFile.mapFile(value =>
       getPath(value) match {
-        case Success(gcsPath: GcsPath) => workingDisk.mountPoint.resolve(gcsPath.pathWithoutScheme).pathAsString
+        case Success(gcsPath: GcsPath) =>
+          log.info("case Success(gcsPath: GcsPath)")
+          val result = workingDisk.mountPoint.resolve(gcsPath.pathWithoutScheme).pathAsString
+          log.info(s"result is $result")
+          result
         case Success(drsPath: DrsPath) =>
+          log.info("case Success(drsPath: DrsPath)")
           val filePath = DrsResolver.getContainerRelativePath(drsPath).unsafeRunSync()
-          workingDisk.mountPoint.resolve(filePath).pathAsString
-        case _ => value
+          val result = workingDisk.mountPoint.resolve(filePath).pathAsString
+          log.info(s"result is $result")
+          result
+        case _ =>
+          log.info("case _")
+          log.info(s"result is $value")
+          value
       }
     )
   }
