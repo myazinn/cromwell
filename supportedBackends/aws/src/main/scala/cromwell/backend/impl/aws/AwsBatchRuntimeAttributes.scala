@@ -109,7 +109,7 @@ object AwsBatchRuntimeAttributes {
 
   private def queueArnValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[String] =
     QueueArnValidation.instance.withDefault(QueueArnValidation.configDefaultWomValue(runtimeConfig) getOrElse
-      (throw new RuntimeException(s"""queueArn is required""")))
+      (throw new RuntimeException("queueArn is missing or has the incorrect format")))
 
   def runtimeAttributesBuilder(configuration: AwsBatchConfiguration): StandardValidatedRuntimeAttributesBuilder = {
     val runtimeConfig = configuration.runtimeConfig
@@ -154,10 +154,26 @@ object AwsBatchRuntimeAttributes {
 object QueueArnValidation {
   lazy val instance: RuntimeAttributesValidation[String] = ArnValidation(AwsBatchRuntimeAttributes.QueueArnKey)
 
-  def configDefaultWomValue(config: Option[Config]): Option[WomValue] = instance.configDefaultWomValue(config)
+  def configDefaultWomValue(config: Option[Config]): Option[WomValue] =
+    instance.configDefaultWomValue(config).filter(ArnValidation.isValidArn)
 }
-// TODO: provide arn regexp validation here
+
 object ArnValidation {
+  // General ARN format can be found here
+  // https://docs.aws.amazon.com/en_us/general/latest/gr/aws-arns-and-namespaces.html#genref-arns
+  // In current form it will not recognize the following ARN as valid due to its complex structure
+  // arn:aws:autoscaling:us-east-1:123456789012:scalingPolicy:c7a27f55-d35e-4153-b044-8ca9155fc467:autoScalingGroupName/my-test-asg1:policyName/my-scaleout-policy
+  // Support for this format greatly complicates the regexp.
+  // Since autoscaling ARN's are not used by Cromwell by now, it is not yet clear how much support of this ARN is needed.
+  /**
+   * @return a function that returns true if the valueString of passed WomValue is a valid AWS ARN and false otherwise
+   */
+  def isValidArn: WomValue => Boolean =
+    womValueArn => {
+      val arnPattern = "(arn):(aws(-[A-Za-z]+){0,2}):([\\w-]+):([A-Za-z]{2}(-[A-Za-z]+){1,2}-\\d)?:(\\d{12})?:(([\\w- ]+[:/])?(((/\\*)|([\\w- /\\.]))+))([:/]\\w+)?"
+      womValueArn.valueString matches arnPattern
+    }
+
   def apply(key: String): ArnValidation = new ArnValidation(key)
 }
 class ArnValidation(override val key: String) extends StringRuntimeAttributesValidation(key)
