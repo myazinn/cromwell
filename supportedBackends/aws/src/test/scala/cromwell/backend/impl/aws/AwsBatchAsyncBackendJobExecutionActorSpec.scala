@@ -105,7 +105,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
       |  }
       |  runtime {
       |    docker: "alpine:latest"
-      |    queueArn: "arn:aws:myarn"
+      |    queueArn: "arn:aws:batch:::job-queue"
       |  }
       |}
       |
@@ -191,7 +191,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
       |runtime {
       |  docker: "alpine:latest"
       |  disks: "local-disk"
-      |  queueArn: "arn:aws:myarn"
+      |  queueArn: "arn:aws:batch:::job-queue"
       |}
     """.stripMargin
 
