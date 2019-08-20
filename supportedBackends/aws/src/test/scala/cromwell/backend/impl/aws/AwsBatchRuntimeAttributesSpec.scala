@@ -57,7 +57,7 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
 
   val expectedDefaults = new AwsBatchRuntimeAttributes(refineMV[Positive](1), Vector("us-east-1a", "us-east-1b"),
 
-    MemorySize(2, MemoryUnit.GB), Vector(AwsBatchWorkingDisk()), "ubuntu:latest", "arn:aws:batch:::job-queue", false,
+    MemorySize(2, MemoryUnit.GB), Vector(AwsBatchWorkingDisk()), "ubuntu:latest", "arn:aws:batch:us-east-1:111222333444:job-queue/job-queue", false,
     ContinueOnReturnCodeSet(Set(0)), false)
 
   "AwsBatchRuntimeAttributes" should {
