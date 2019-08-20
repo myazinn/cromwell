@@ -154,23 +154,26 @@ object AwsBatchRuntimeAttributes {
 object QueueArnValidation {
   lazy val instance: RuntimeAttributesValidation[String] = ArnValidation(AwsBatchRuntimeAttributes.QueueArnKey)
 
-  // AWS Batch format can be found here
-  // https://docs.aws.amazon.com/en_us/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-batch
-  // arn:aws:batch:region:account-id:job-queue/queue-name
-  /**
-   * @return a function that returns true if the valueString of passed WomValue is a valid AWS ARN and false otherwise
-   */
-  def isValidQueueArn: WomValue => Boolean =
-    womValueQueueArn => {
-      val arnPattern = "(arn):(aws(-[a-z]+){0,2}):(batch):([a-z]{2}(-[a-z]+){1,2}-\\d):(\\d{12}):(job-queue)/([\\w-]{1,128})"
-      womValueQueueArn.valueString matches arnPattern
-    }
-
   def configDefaultWomValue(config: Option[Config]): Option[WomValue] =
-    instance.configDefaultWomValue(config).filter(isValidQueueArn)
+    instance.configDefaultWomValue(config).filter(ArnValidation.isValidArn)
 }
 
 object ArnValidation {
+  // General ARN format can be found here
+  // https://docs.aws.amazon.com/en_us/general/latest/gr/aws-arns-and-namespaces.html#genref-arns
+  // In current form it will not recognize the following ARN as valid due to its complex structure
+  // arn:aws:autoscaling:us-east-1:123456789012:scalingPolicy:c7a27f55-d35e-4153-b044-8ca9155fc467:autoScalingGroupName/my-test-asg1:policyName/my-scaleout-policy
+  // Support for this format greatly complicates the regexp.
+  // Since autoscaling ARN's are not used by Cromwell by now, it is not yet clear how much support of this ARN is needed.
+  /**
+   * @return a function that returns true if the valueString of passed WomValue is a valid AWS ARN and false otherwise
+   */
+  def isValidArn: WomValue => Boolean =
+    womValueArn => {
+      val arnPattern = "(arn):(aws(-[A-Za-z]+){0,2}):([\\w-]+):([A-Za-z]{2}(-[A-Za-z]+){1,2}-\\d)?:(\\d{12})?:(([\\w- ]+[:/])?(((/\\*)|([\\w- /\\.]))+))([:/]\\w+)?"
+      womValueArn.valueString matches arnPattern
+    }
+
   def apply(key: String): ArnValidation = new ArnValidation(key)
 }
 class ArnValidation(override val key: String) extends StringRuntimeAttributesValidation(key)
