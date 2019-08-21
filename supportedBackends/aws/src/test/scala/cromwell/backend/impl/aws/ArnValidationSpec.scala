@@ -36,26 +36,32 @@ class ArnValidationSpec extends WordSpecLike with Matchers{
         "arn:aws:resource-groups:us-west-2:123456789012:group/MyExampleGroup/Myfile.png",
         "arn:aws:s3:::my_corporate_bucket/*",
         "arn:aws:s3:::my_corporate_bucket/Development/*",
-        "arn:aws:autoscaling:us-east-1:123456789012:scalingPolicy:c7a27f55-d35e-4153-b044-8ca9155fc467:autoScalingGroupName/my-test-asg1:policyName/my-scaleout-policy"
+        "arn:aws:autoscaling:us-east-1:123456789012:scalingPolicy:c7a27f55-d35e-4153-b044-8ca9155fc467:autoScalingGroupName/my-test-asg1:policyName/my-scaleout-policy",
+        "arn:aws:waf-regional:us-east-1:123456789012:rule/41b5b052-1e4a-426b-8149-3595be6342c2",
+        "arn:aws:lambda:us-west-2:123456789012:function:helloworld:$LATEST",
+        "arn:aws:swf:us-east-1:123456789012:/domain/department1",
+        "arn:aws:swf:*:123456789012:/domain/*",
+        "arn:aws:cognito-sync:us-east-1:123456789012:identitypool/us-east-1:1a1a1a1a-ffff-1111-9999-12345678"
       )
-      val validatedArns =
-        validArnsAsStrings
-          .map(arn => Map(arnKey -> WomString(arn)))
-          .map(values => arnValidator.validate(values))
-      validatedArns.forall(_.isValid) shouldBe true
+      validArnsAsStrings foreach { arn =>
+        val keyToValue = Map(arnKey -> WomString(arn))
+        arnValidator.validate(keyToValue).isValid shouldBe true
       }
+    }
 
     "fail to validate an invalid arn entry" in {
       val invalidArnsAsStrings = List(
         "arn:aws:iam::123456789012:u*",
         "arn:aws:s3::my_corporate_bucket",
         "arn:AWS:batch:us-west-2:123456789012:job-queue/default-a4e50e00-b850-11e9",
+        "arn:aws-CN:batch:us-west-2:123456789012:job-queue/default-a4e50e00-b850-11e9",
+        "arn:aws:waf_regional:us-east-1:123456789012:rule/41b5b052-1e4a-426b-8149-3595be6342c2",
+        "arn:aws:s3:::my_corporate_bucket/*text"
       )
-      val validatedArns =
-        invalidArnsAsStrings
-          .map(arn => Map(arnKey -> WomString(arn)))
-          .map(values => arnValidator.validate(values))
-      validatedArns.forall(_.isInvalid) shouldBe true
+      invalidArnsAsStrings foreach { arn =>
+        val keyToValue = Map(arnKey -> WomString(arn))
+        arnValidator.validate(keyToValue).isInvalid shouldBe true
+      }
     }
   }
 }

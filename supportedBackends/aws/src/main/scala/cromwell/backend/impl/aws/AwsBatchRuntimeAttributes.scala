@@ -155,7 +155,32 @@ object QueueArnValidation extends ArnValidation(AwsBatchRuntimeAttributes.QueueA
   // queue arn format can be found here
   // https://docs.aws.amazon.com/en_us/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-batch
   // arn:aws:batch:region:account-id:job-queue/queue-name
-  override protected val arnPattern = "(arn):(aws(-[a-z]+){0,2}):(batch):([a-z]{2}(-[a-z]+){1,2}-\\d):(\\d{12}):(job-queue)/([\\w-]{1,128})".r
+  override protected val arnRegex =
+  s"""
+      (?x)                            # Turn on comments and whitespace insensitivity
+      (arn)                           # Every AWS ARN starts with "arn"
+      :
+      (                               # Begin capturing ARN for partition
+        aws                           # Required part of a partition
+        (-[a-z]+){0,2}                # Optional part like "-cn" or "-us-gov". Therefore, the whole partition may look like "aws", "aws-cn", "aws-us-gov"
+      )                               # End capturing ARN for partition
+      :
+      (batch)                         # Job queues is contained in AWS Batch
+      :
+      (                               # Begin capturing ARN for region
+        [a-z]{2}                      # ALPHA-2 county code
+        (-[a-z]+){1,2}                # Specific region like "-west" or "-southeast". In case of AWS GovCloud it may be like "-gov-east"
+        -\\d                          # Sequence number of the region
+      )                               # End capturing ARN for region
+      :
+      (\\d{12})                       # Account ID. The AWS account ID is a 12-digit number.
+      :
+      (                               # Begin capturing ARN for "resourcetype/resource"
+        (job-queue)                   # Resource type of AWS Batch Job queue
+        /                             # Separator between resource type and resource name
+        ([\\w-]{1,128})               # Resource name of Job queue can only contain alphanumeric characters, dashes, and underscores. It also must be up to 128 characters long.
+      )                               # End capturing ARN for "resourcetype/resource"
+    """.trim.r
 }
 
 object ArnValidation {
@@ -169,7 +194,7 @@ class ArnValidation(override val key: String) extends StringRuntimeAttributesVal
 
   private def validateArn(possibleArn: String): ErrorOr[String] = {
     possibleArn match {
-      case arnPattern(_@_*) => possibleArn.validNel
+      case arnRegex(_@_*) => possibleArn.validNel
       case _ => "ARN has invalid format".invalidNel
     }
   }
@@ -177,7 +202,45 @@ class ArnValidation(override val key: String) extends StringRuntimeAttributesVal
   // Possible ARN formats can be found here
   // https://docs.aws.amazon.com/en_us/general/latest/gr/aws-arns-and-namespaces.html
   // This is quite vague regex, but it allows to support a lot of ARN formats
-  protected val arnPattern = "(arn):(aws(-[A-Za-z]+){0,2}):([\\w-]+):([A-Za-z]{2}(-[A-Za-z]+){1,2}-\\d)?:(\\d{12})?:(([\\w- ]+[:/])?(((/\\*)|([\\w- /.:]))+))([:/]\\w+)?".r
+  protected val arnRegex =
+  s"""
+      (?x)                            # Turn on comments and whitespace insensitivity
+      (arn)                           # Every AWS ARN starts with "arn"
+      :
+      (                               # Begin capturing ARN for partition
+        aws                           # Required part of a partition
+        (-[a-z]+){0,2}                # Optional part like "-cn" or "-us-gov". Therefore, the whole partition may look like "aws", "aws-cn", "aws-us-gov"
+      )                               # End capturing ARN for partition
+      :
+      ([a-z0-9-]+)                    # Service name, e.g. "batch", "s3", "aws-marketplace"
+      :
+      (                               # Begin capturing ARN for region. Not required for some services, e.g. S3
+        (
+          [a-z]{2}                    # ALPHA-2 county code
+          (-[a-z]+){1,2}              # Specific region like "-west" or "-southeast". In case of AWS GovCloud it may be like "-gov-east"
+          -\\d                        # Sequence number of the region
+        )
+        |
+        (\\*)                         # Some services like SWF support replacing region with wildcard
+      )?                              # End capturing ARN for region.
+      :
+      (\\d{12})?                      # Account ID. The AWS account ID is a 12-digit number. Not required for some services, e.g. S3
+      [:/]{1,2}                       # Separator in this place may not be a simple colon
+      (                               # Begin capturing ARN for "resourcetype/resource:(/)qualifier"
+        (                             # Begin capturing ARN for resourcetype
+          [\\w-]+                     # resourcetype
+          [:/]                        # Separator between resourcetype and resource
+        )?                            # End capturing ARN for resourcetype
+        (                             # Begin capturing ARN for resource
+          ([\\w-\\ /.:])+             # Resource name. May have a complex structure like "8ca:auto/my:policy/my"
+          (/\\*)?                     # Wildcard that supported by some resources like S2
+        )                             # End capturing ARN for resource
+        (                             # Begin capturing ARN for optional qualifier
+          [:/]                        # Qualifier may be separated both using colon and slash
+          [$$\\w]+                    # Qualifier itself
+        )?                            # End capturing ARN qualifier. Qualifier is optional
+      )                               # End capturing ARN for "resourcetype/resource/qualifier"
+    """.trim.r
 }
 
 object ZonesValidation extends RuntimeAttributesValidation[Vector[String]] {
