@@ -205,7 +205,7 @@ class ArnValidation(override val key: String) extends StringRuntimeAttributesVal
   protected val arnRegex =
   s"""
       (?x)                            # Turn on comments and whitespace insensitivity
-      (arn)                           # Every AWS ARN starts with "arn"
+      (arn)                           # Every ARN starts with "arn"
       :
       (                               # Begin capturing ARN for partition
         aws                           # Required part of a partition

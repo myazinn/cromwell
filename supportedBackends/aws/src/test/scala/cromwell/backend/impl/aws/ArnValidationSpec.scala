@@ -1,5 +1,7 @@
 package cromwell.backend.impl.aws
 
+import cats.data.NonEmptyList
+import cats.data.Validated.{Invalid, Valid}
 import org.scalatest.{Matchers, WordSpecLike}
 import wom.values.WomString
 
@@ -45,7 +47,7 @@ class ArnValidationSpec extends WordSpecLike with Matchers{
       )
       validArnsAsStrings foreach { arn =>
         val keyToValue = Map(arnKey -> WomString(arn))
-        arnValidator.validate(keyToValue).isValid shouldBe true
+        arnValidator.validate(keyToValue) shouldBe Valid(arn)
       }
     }
 
@@ -60,7 +62,7 @@ class ArnValidationSpec extends WordSpecLike with Matchers{
       )
       invalidArnsAsStrings foreach { arn =>
         val keyToValue = Map(arnKey -> WomString(arn))
-        arnValidator.validate(keyToValue).isInvalid shouldBe true
+        arnValidator.validate(keyToValue) shouldBe Invalid(NonEmptyList("ARN has invalid format", Nil))
       }
     }
   }
