@@ -138,13 +138,13 @@ object Dependencies {
   private val workbenchUtilV = "0.6-27810079-SNAP"
 
   private val slf4jFacadeDependencies = List(
-    "org.slf4j" % "slf4j-api" % slf4jV,
+    "org.slf4j" % "slf4j-api" % slf4jV % Provided,
     "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingV,
   )
 
-  private val circeYamlDependency = "io.circe" %% "circe-yaml" % circeYamlV
+  private val circeYamlDependency = ("io.circe" %% "circe-yaml" % circeYamlV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel")
 
-  private val circeDependencies = List(
+  private val circeDependencies = (List(
     "core",
     "parser",
     "generic",
@@ -153,19 +153,19 @@ object Dependencies {
     "literal"
   ).map(m => "io.circe" %% s"circe-$m" % circeV) :+ circeYamlDependency :+
   "io.circe" %% "circe-generic-extras" % circeGenericExtrasV :+
-  "io.circe" %% "circe-config" % circeConfigV
+  "io.circe" %% "circe-config" % circeConfigV).map(_.exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"))
 
   private val catsDependencies = List(
-    "org.typelevel" %% "cats-core" % catsV,
-    "org.typelevel" %% "alleycats-core" % catsV,
-    "org.typelevel" %% "mouse" % mouseV,
-    "org.typelevel" %% "kittens" % kittensV
+    "org.typelevel" %% "cats-core" % catsV % Provided,
+    ("org.typelevel" %% "alleycats-core" % catsV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
+    ("org.typelevel" %% "mouse" % mouseV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
+    ("org.typelevel" %% "kittens" % kittensV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel")
   )
 
   private val http4sDependencies = List(
     "org.http4s" %% "http4s-dsl" % http4sVersion,
     "org.http4s" %% "http4s-blaze-client" % http4sVersion,
-    "org.http4s" %% "http4s-circe" % http4sVersion
+    ("org.http4s" %% "http4s-circe" % http4sVersion).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel")
   )
 
   private val googleApiClientDependencies = List(
@@ -187,7 +187,7 @@ object Dependencies {
 
   val spiUtilDependencies = List(
     "com.iheart" %% "ficus" % ficusV,
-    "org.typelevel" %% "cats-effect" % catsEffectV,
+    ("org.typelevel" %% "cats-effect" % catsEffectV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
   )
 
   val implFtpDependencies = List(
@@ -211,7 +211,7 @@ object Dependencies {
   )
 
   private val configDependencies = List(
-    "com.typesafe" % "config" % typesafeConfigV,
+    "com.typesafe" % "config" % typesafeConfigV % Provided,
     "com.iheart" %% "ficus" % ficusV
   )
 
@@ -224,12 +224,12 @@ object Dependencies {
   Similarly, not _all_ executables/logback.xml configs will need logback-access, raven-logback, janino, etc.
   Still, leaving them as dependencies for simplicity's sake.
    */
-  private val slf4jBindingDependencies = List(
+  val slf4jBindingDependencies = List(
     // http://logback.qos.ch/dependencies.html
     "ch.qos.logback" % "logback-access" % logbackV,
-    "ch.qos.logback" % "logback-classic" % logbackV,
+    "ch.qos.logback" % "logback-classic" % logbackV % Provided,
     "ch.qos.logback" % "logback-core" % logbackV,
-    "com.typesafe.akka" %% "akka-slf4j" % akkaV,
+    "com.typesafe.akka" %% "akka-slf4j" % akkaV % Provided,
     "io.sentry" % "sentry-logback" % sentryLogbackV,
     "org.codehaus.janino" % "janino" % janinoV,
     // Replace all log4j usage with slf4j
@@ -238,9 +238,9 @@ object Dependencies {
   ) ++ slf4jFacadeDependencies
 
   private val slickDependencies = List(
-    "com.typesafe.slick" %% "slick" % slickV,
+    "com.typesafe.slick" %% "slick" % slickV % Provided,
     "com.typesafe.slick" %% "slick-hikaricp" % slickV,
-    "com.rms.miu" %% "slick-cats" % slickCatsV
+    ("com.rms.miu" %% "slick-cats" % slickCatsV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel")
   )
 
   private val liquibaseDependencies = List(
@@ -254,25 +254,25 @@ object Dependencies {
   )
 
   private val akkaDependencies = List(
-    "com.typesafe.akka" %% "akka-actor" % akkaV,
+    "com.typesafe.akka" %% "akka-actor" % akkaV % Provided,
     "com.typesafe.akka" %% "akka-testkit" % akkaV % Test,
   )
 
   private val akkaStreamDependencies = List(
-    "com.typesafe.akka" %% "akka-stream" % akkaV,
+    "com.typesafe.akka" %% "akka-stream" % akkaV % Provided,
     "com.typesafe.akka" %% "akka-stream-testkit" % akkaV % Test,
   ) ++ akkaDependencies
 
   private val akkaHttpDependencies = List(
-    "com.typesafe.akka" %% "akka-http" % akkaHttpV,
+    "com.typesafe.akka" %% "akka-http" % akkaHttpV % Provided,
     "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpV % Test,
     // WOM internally embeds spray-json. Leave this import here until WOM externalizes the json library choice like
     // other libraries do. See akka-http, elastic4s, etc.
-    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpV,
+    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpV % Provided,
   ) ++ akkaStreamDependencies
 
   private val akkaHttpCirceIntegrationDependency = List(
-    "de.heikoseeberger" %% "akka-http-circe" % akkaHttpCirceIntegrationV
+    ("de.heikoseeberger" %% "akka-http-circe" % akkaHttpCirceIntegrationV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel")
   )
 
   private val swaggerUiDependencies = List(
@@ -379,7 +379,7 @@ object Dependencies {
       exclude("javax.xml.bind", "jaxb-api")
       exclude("com.sun.xml.bind", "jaxb-core")
       exclude("javax.activation", "activation"),
-    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpV
+    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpV % Provided
   )
 
   private val dbmsDependencies = List(
@@ -396,7 +396,7 @@ object Dependencies {
   // Sub-project dependencies, added in addition to any dependencies inherited from .dependsOn().
 
   val commonDependencies = List(
-    "org.typelevel" %% "cats-effect" % catsEffectV,
+    ("org.typelevel" %% "cats-effect" % catsEffectV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
     "org.apache.commons" % "commons-lang3" % commonsLang3V,
     "org.apache.commons" % "commons-text" % commonsTextV,
     "com.lihaoyi" %% "pprint" % "0.6.3",
@@ -447,7 +447,7 @@ object Dependencies {
 
   val languageFactoryDependencies = List(
     "com.softwaremill.sttp" %% "core" % sttpV,
-    "com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpV
+    ("com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
   )
 
   val draft2LanguageFactoryDependencies = List(
@@ -482,7 +482,7 @@ object Dependencies {
     "org.broadinstitute" % "heterodon" % heterodonV classifier "single",
     "org.scalactic" %% "scalactic" % scalacticV,
     "org.scalacheck" %% "scalacheck" % scalacheckV % Test,
-    "io.circe" %% "circe-optics" % circeOpticsV,
+    ("io.circe" %% "circe-optics" % circeOpticsV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
     "org.mozilla" % "rhino" % rhinoV,
     "org.javadelight" % "delight-rhino-sandbox" % delightRhinoSandboxV,
     "org.scalamock" %% "scalamock" % scalamockV % Test,
@@ -493,7 +493,7 @@ object Dependencies {
 
   val centaurCwlRunnerDependencies = List(
     "com.github.scopt" %% "scopt" % scoptV,
-    "io.circe" %% "circe-optics" % circeOpticsV
+    ("io.circe" %% "circe-optics" % circeOpticsV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel")
   ) ++ slf4jBindingDependencies
 
   val coreDependencies = List(
@@ -513,7 +513,7 @@ object Dependencies {
 
   val cromwellApiClientDependencies = List(
     "org.scalaz" %% "scalaz-core" % scalazV,
-    "org.typelevel" %% "cats-effect" % catsEffectV,
+    ("org.typelevel" %% "cats-effect" % catsEffectV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
     "co.fs2" %% "fs2-io" % fs2V % Test,
   ) ++ akkaHttpDependencies ++ betterFilesDependencies ++ catsDependencies
 
@@ -573,7 +573,7 @@ object Dependencies {
     "com.dimafeng" %% "testcontainers-scala-mysql" % testContainersScalaV,
     "com.dimafeng" %% "testcontainers-scala-mariadb" % testContainersScalaV,
     "com.dimafeng" %% "testcontainers-scala-postgresql" % testContainersScalaV
-  ) ++ slf4jBindingDependencies // During testing, add an slf4j binding for _all_ libraries.
+  ) // During testing, add an slf4j binding for _all_ libraries.
 
   val kindProjectorPlugin = "org.spire-math" %% "kind-projector" % kindProjectorV
   val paradisePlugin = "org.scalamacros" % "paradise" % paradiseV cross CrossVersion.full
@@ -587,9 +587,9 @@ object Dependencies {
   val drsLocalizerDependencies = List(
     "com.google.auth" % "google-auth-library-oauth2-http" % googleOauth2V,
     "com.google.cloud" % "google-cloud-storage" % googleCloudStorageV,
-    "org.typelevel" %% "cats-effect" % catsEffectV,
+    ("org.typelevel" %% "cats-effect" % catsEffectV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel"),
     "com.iheart" %% "ficus" % ficusV,
-    "com.softwaremill.sttp" %% "circe" % sttpV
+    ("com.softwaremill.sttp" %% "circe" % sttpV).exclude("org.typelevel", "cats-core").exclude("org.typelevel", "cats-kernel")
   ) ++ circeDependencies ++ catsDependencies ++ slf4jBindingDependencies ++ languageFactoryDependencies
 
   val allProjectDependencies =

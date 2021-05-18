@@ -92,7 +92,7 @@ object Testing {
   private lazy val minnieKennySingleRunner = new MinnieKennySingleRunner
 
   val testSettings = List(
-    libraryDependencies ++= testDependencies.map(_ % Test),
+    libraryDependencies ++= testDependencies.map(_ % Test) ++ slf4jBindingDependencies,
     // `test` (or `assembly`) - Run most tests
     Test / testOptions ++= Seq(TestReportArgs) ++ filterTestArgs,
     // `alltests:test` - Run all tests
@@ -114,7 +114,7 @@ object Testing {
   )
 
   val integrationTestSettings = List(
-    libraryDependencies ++= testDependencies.map(_ % IntegrationTest)
+    libraryDependencies ++= testDependencies.map(_ % IntegrationTest) ++ slf4jBindingDependencies
   ) ++ itSettings
 
   def addTestSettings(project: Project) = {

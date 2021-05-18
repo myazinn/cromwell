@@ -89,6 +89,7 @@ object Settings {
     assembly / assemblyJarName := name.value + "-" + version.value + ".jar",
     assembly / test := {},
     assembly / assemblyMergeStrategy := customMergeStrategy.value,
+    assembly / assemblyOption := (assembly / assemblyOption).value.copy(includeScala = false),
     assembly / logLevel :=
       sys.env.get("CROMWELL_SBT_ASSEMBLY_LOG_LEVEL").flatMap(Level.apply).getOrElse((assembly / logLevel).value)
   )
