@@ -7,6 +7,8 @@ object Merging {
     case PathList(ps@_*) if ps.last == "project.properties" =>
       // Merge/Filter project.properties files from Google jars that otherwise collide at merge time.
       MergeStrategy.filterDistinctLines
+    case PathList(ps@_*) if ps.headOption.contains("cats") && !ps.tail.headOption.contains("effect") =>
+      MergeStrategy.discard
     case PathList(ps@_*) if ps.last == "logback.xml" =>
       MergeStrategy.first
     // AWS SDK v2 configuration files - can be discarded
